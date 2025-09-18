@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class LLMRegistry:
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path or "backend/configs/llm/llm_configs.yml"
+        self.config_path = config_path or "backend/llm/configs/llm_configs.yml"
         self.config_data: Dict[str, Any] = {}
         self._clients: Dict[str, type] = {}
         self._configs: Dict[str, type] = {}
