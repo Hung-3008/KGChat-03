@@ -1,6 +1,7 @@
 from .base import BaseLLMClient, BaseLLMConfig, LLMResponse
 from .factory import llm_registry
 from .providers.gemini import GeminiClient, GeminiConfig
+from .providers.ollama import OllamaClient, OllamaConfig
 
 def initialize():
     """Initialize the LLM system by registering all providers"""
@@ -20,5 +21,6 @@ __all__ = [
     "LLMResponse",
     "llm_registry",
     "GeminiClient",
-    "GeminiConfig"
+    "OllamaClient",
+    "OllamaConfig"
 ]
