@@ -261,7 +261,7 @@ async def demonstrate_complete_pipeline(pmc_file: str, use_real_api: bool = Fals
         output_data["chunks_summary"].append(chunk_summary)
 
     # save results
-    output_file = f"/Users/maitiendung/TAI LIEU/HOME/research/KGCHAT_new_ver/output/pmc_chunking_ebedding/complete_pipeline_results_{pmc_file.replace('.json', '')}.json"
+    output_file = f"/Users/maitiendung/TAI LIEU/HOME/research/KGCHAT_new_ver/output/pmc_chunking_gemini_embedding/pmc_pipeline_results_{pmc_file.replace('.json', '')}.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
