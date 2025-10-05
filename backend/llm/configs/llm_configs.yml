@@ -4,6 +4,9 @@ providers:
   ollama:
     client: "backend.llm.providers.ollama.ollama_client.OllamaClient"
     config: "backend.llm.providers.ollama.ollama_config.OllamaConfig"
+  gemini:
+    client: "backend.llm.providers.gemini.gemini_client.GeminiClient"
+    config: "backend.llm.providers.gemini.gemini_config.GeminiConfig"
 
 defaults:
   model_name: "llama3.2:3b"

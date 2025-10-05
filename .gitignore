@@ -352,3 +352,4 @@ site/
 # .azure/
 backend/configs/llm/llm_configs.yml
 commands.ipynb
+*.ipynb
