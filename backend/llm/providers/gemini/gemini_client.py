@@ -18,26 +18,31 @@ class GeminiClient(BaseLLMClient):
     def _initialize_client(self) -> None:
         if not self.config.api_key:
             raise AuthenticationError("Gemini API key is required")
-
         genai.configure(api_key=self.config.api_key)
-        generation_config = self.config.get_generation_config()
-
-        self._model = genai.GenerativeModel(
-            model_name=self.config.model_name,
-            generation_config=generation_config
-        )
-
         logger.info(
             f"Initialized Gemini client with model: {self.config.model_name}")
 
-    def generate(self, user_prompt: str, system_prompt: Optional[str] = None, **kwargs) -> LLMResponse:
+    def generate(self, user_prompt: str, system_prompt: Optional[str] = None, response_schema: Optional[Dict[str, Any]] = None, **kwargs) -> LLMResponse:
         try:
-            if system_prompt:
-                full_prompt = f"System: {system_prompt}\n\nUser: {user_prompt}"
-            else:
-                full_prompt = user_prompt
+            model = genai.GenerativeModel(
+                model_name=self.config.model_name,
+                system_instruction=system_prompt
+            )
 
-            response = self._model.generate_content(full_prompt)
+            generation_config_args = self.config.get_generation_config()
+            
+            if response_schema:
+                generation_config_args["response_mime_type"] = "application/json"
+                generation_config_args["response_schema"] = response_schema
+            elif self.config.response_mime_type:
+                generation_config_args["response_mime_type"] = self.config.response_mime_type
+
+            generation_config = genai.GenerationConfig(**generation_config_args)
+
+            response = model.generate_content(
+                user_prompt,
+                generation_config=generation_config
+            )
 
             message = response.text if response.parts else "No response generated"
 

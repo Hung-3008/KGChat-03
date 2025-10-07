@@ -1,0 +1,19 @@
+graph_extraction:
+  type: "standard" # "standard" or "iterative"
+  provider: "gemini"  # "ollama" or "gemini"
+  k: 3
+  models:
+    #- "llama3.1:8b"
+    - "gemini-2.5-flash"
+  datasets:
+    - "NCBItestset_corpus"
+  prompt_settings:
+      base_path: "test/nodes_extraction/prompts/set_02"
+      stages:
+        node_extraction:
+          mode: "standard"  # options: "interactive", "standard"
+          k: 3  
+          system_prompt: "system_prompt.txt"
+          user_prompt_template: "zeroshot_prompt.txt" # zeroshot_prompt.txt or fewshot_prompt.txt or cot_prompt.txt
+          feedback_prompt: "feedback_prompt.txt"
+  max_samples: 5

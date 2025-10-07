@@ -1,0 +1,44 @@
+Extract the medical entities from the following clinical text based on the examples provided.
+
+---
+Example 1:
+Text: The patient complains of a sore throat and headache. A rapid strep test was performed. The doctor prescribed penicillin.
+Output:
+{{
+  "entities": [
+    {{"text": "sore throat", "type": "Problem"}},
+    {{"text": "headache", "type": "Problem"}},
+    {{"text": "rapid strep test", "type": "Test"}},
+    {{"text": "penicillin", "type": "Treatment"}}
+  ]
+}}
+---
+Example 2:
+Text: The patient has a history of hypertension and was admitted for chest pain. An EKG and cardiac enzymes were ordered. He was started on nitroglycerin.
+Output:
+{{
+  "entities": [
+    {{"text": "hypertension", "type": "Problem"}},
+    {{"text": "chest pain", "type": "Problem"}},
+    {{"text": "EKG", "type": "Test"}},
+    {{"text": "cardiac enzymes", "type": "Test"}},
+    {{"text": "nitroglycerin", "type": "Treatment"}}
+  ]
+}}
+---
+Example 3:
+Text: The patient presents with a fractured arm. An X-ray confirmed the diagnosis. A cast was applied.
+Output:
+{{
+  "entities": [
+    {{"text": "fractured arm", "type": "Problem"}},
+    {{"text": "X-ray", "type": "Test"}},
+    {{"text": "cast", "type": "Treatment"}}
+  ]
+}}
+---
+
+Clinical Text:
+---
+{text}
+---

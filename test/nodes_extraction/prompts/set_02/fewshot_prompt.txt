@@ -1,0 +1,113 @@
+Extract biomedical entities from scientific text following the patterns in these examples.
+
+**Entity Types:**
+- SpecificDisease: Specific diseases, syndromes, medical conditions
+- DiseaseClass: Broad disease categories, general medical terminology
+- Modifier: Genes, proteins, genetic markers, chromosomal regions
+
+---
+**Example 1:**
+
+Text: "Abnormal hepatic copper accumulation is recognized as an inherited disorder in man, mouse, rat and dog. The major cause of hepatic copper accumulation in man is a dysfunctional ATP7B gene, causing Wilson disease (WD)."
+
+Output:
+{{
+  "entities": [
+    {{"text": "hepatic copper accumulation", "type": "SpecificDisease"}},
+    {{"text": "inherited disorder", "type": "DiseaseClass"}},
+    {{"text": "ATP7B", "type": "Modifier"}},
+    {{"text": "Wilson disease", "type": "SpecificDisease"}},
+    {{"text": "WD", "type": "SpecificDisease"}}
+  ]
+}}
+
+---
+**Example 2:**
+
+Text: "The development of colorectal cancer and a variable range of extracolonic manifestations in familial adenomatous polyposis (FAP) is the result of the dominant inheritance of adenomatous polyposis coli (APC) gene mutations."
+
+Output:
+{{
+  "entities": [
+    {{"text": "colorectal cancer", "type": "SpecificDisease"}},
+    {{"text": "familial adenomatous polyposis", "type": "SpecificDisease"}},
+    {{"text": "FAP", "type": "SpecificDisease"}},
+    {{"text": "adenomatous polyposis coli", "type": "Modifier"}},
+    {{"text": "APC", "type": "Modifier"}}
+  ]
+}}
+
+---
+**Example 3:**
+
+Text: "By investigating the common autosomal recessive copper toxicosis (CT) in Bedlington terriers, we have identified a new locus involved in progressive liver disease."
+
+Output:
+{{
+  "entities": [
+    {{"text": "copper toxicosis", "type": "SpecificDisease"}},
+    {{"text": "CT", "type": "SpecificDisease"}},
+    {{"text": "liver disease", "type": "DiseaseClass"}}
+  ]
+}}
+
+---
+**Example 4:**
+
+Text: "Mutations in the ATP7B genes have also been demonstrated in mouse and rat. The ATP7B gene has been excluded in the much rarer human copper overload disease non-Indian childhood cirrhosis, indicating genetic heterogeneity."
+
+Output:
+{{
+  "entities": [
+    {{"text": "ATP7B", "type": "Modifier"}},
+    {{"text": "copper overload", "type": "SpecificDisease"}},
+    {{"text": "non-Indian childhood cirrhosis", "type": "SpecificDisease"}}
+  ]
+}}
+
+---
+**Example 5:**
+
+Text: "Direct mutation analysis of the APC gene was performed to determine genotype-phenotype correlations for nine extracolonic manifestations and to investigate the incidence of APC mutations in non-FAP colorectal cancer."
+
+Output:
+{{
+  "entities": [
+    {{"text": "APC", "type": "Modifier"}},
+    {{"text": "FAP", "type": "Modifier"}},
+    {{"text": "colorectal cancer", "type": "Modifier"}}
+  ]
+}}
+
+---
+**Key Patterns to Learn:**
+
+1. **Disease + Abbreviation**: Extract both forms
+   - "Wilson disease (WD)" → extract "Wilson disease" AND "WD"
+   - "familial adenomatous polyposis (FAP)" → extract both
+   
+2. **Gene Names = Modifier**: Always classify genes/proteins as Modifier
+   - "ATP7B gene", "APC gene", "CTR1", "CTR2" → all Modifier
+   
+3. **Context Matters**: Same term, different types
+   - "colorectal cancer" as diagnosis → SpecificDisease
+   - "colorectal cancer" in "non-FAP colorectal cancer" → Modifier
+   - "APC" gene → Modifier, but in clinical context varies
+   
+4. **Complete Phrases**: Extract full entity
+   - "hepatic copper accumulation" (not just "accumulation")
+   - "familial adenomatous polyposis" (not just "polyposis")
+   
+5. **No Duplicate Entities**: The final output should not contain duplicates. If an entity is mentioned multiple times with the same type, extract it only once.
+
+**Output Format:**
+
+Return ONLY a valid JSON object with NO additional text, markdown, or explanations. The output should be a JSON object with a single key 'entities', which is a list of objects. Each object should have two keys: 'text' and 'type'. Do not include 'start' and 'end' keys.
+
+---
+**Now extract entities from this text:**
+
+Text:
+---
+{text}
+---

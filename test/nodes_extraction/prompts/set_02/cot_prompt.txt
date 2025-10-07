@@ -1,0 +1,14 @@
+You are a clinical entity extractor. Your task is to extract entities of type "Problem", "Test", and "Treatment" from the given clinical text.
+
+Follow these steps:
+1.  First, identify all potential medical entities in the text.
+2.  For each candidate entity, classify it into one of the following categories: "Problem", "Test", "Treatment", or "None".
+3.  Filter out any entities classified as "None".
+4.  Finally, format the extracted entities into a JSON object with an "entities" key, which is a list of dictionaries, where each dictionary has a "text" and "type" key.
+
+Clinical Text:
+---
+{text}
+---
+
+Let's think step by step.

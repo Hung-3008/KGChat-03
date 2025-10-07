@@ -33,10 +33,13 @@ class OllamaClient(BaseLLMClient):
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": user_prompt})
 
+            generation_params = self._generation_config.copy()
+            generation_params.update(kwargs)
+
             response = self._client.chat(
                 model=self.config.model_name,
                 messages=messages,
-                **self._generation_config
+                **generation_params
             )
 
             if not response or "message" not in response:

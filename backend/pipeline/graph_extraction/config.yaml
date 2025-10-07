@@ -1,0 +1,19 @@
+graph_extraction:
+  llm_providers:
+    - provider: "ollama"
+      model: "llama3.1:8b"
+    - provider: "gemini"
+      model: "gemini-2.5-flash"
+  prompt_settings:
+    base_path: "prompts"
+    stages:
+      node_extraction:
+        mode: "interactive"  # options: "interactive", "standard"
+        k: 3  # number of examples to use in interactive mode
+        system_prompt: "extract_nodes/system_prompt.txt"
+        user_prompt_template: "extract_nodes/user_prompt.txt"
+        feedback_prompt: "extract_nodes/feedback_prompt.txt"
+
+      edge_extraction:
+        system_prompt: "extract_edges/system_prompt.txt"
+        user_prompt_template: "extract_edges/user_prompt.txt"

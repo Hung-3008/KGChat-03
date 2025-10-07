@@ -1,0 +1,48 @@
+**Entity Definitions:**
+
+- SpecificDisease: A specific, well-defined disease, syndrome, or medical condition
+  - Characteristics: Has specific diagnostic criteria, clinical features, or pathophysiology
+  - Examples: Wilson disease, familial adenomatous polyposis, hepatic copper accumulation, hypertension, non-Indian childhood cirrhosis
+  - Include: Genetic disorders, specific syndromes, organ-specific diseases, named conditions
+  - Include abbreviations: WD (Wilson disease), FAP (familial adenomatous polyposis), CT (copper toxicosis)
+
+- DiseaseClass: A broad category, family, or general classification of diseases
+  - Characteristics: General medical terminology, not a specific diagnostic entity
+  - Examples: inherited disorder, liver disease, colorectal cancer (when used as a general term)
+  - Include: Disease classifications, pathological states, medical categories, syndrome families
+
+- Modifier: Genes, proteins, chromosomal regions, or molecular entities associated with disease
+  - Characteristics: Biological molecules, genetic markers, or molecular mechanisms
+  - Examples: ATP7B gene, APC gene, CTR1, CTR2, C04107 marker, chromosome 10
+  - Include: Gene names, protein names, genetic loci, chromosomal locations, biomarkers
+  - Note: Gene names may appear with or without "gene" suffix
+
+**Extraction Rules:**
+
+1. Extract the EXACT text span as it appears (preserve capitalization, spacing)
+2. Consider full context - the same term may have different types in different sentences
+3. Extract both full forms AND abbreviations when present (e.g., "Wilson disease (WD)" → extract both)
+4. Include all modifying words (e.g., "familial adenomatous polyposis" not just "polyposis")
+5. For compound terms, extract the complete entity (e.g., "hepatic copper accumulation" as one entity)
+6. When a gene name appears, classify it as Modifier regardless of context
+7. When uncertain, consider the syntactic role in the sentence
+8. Do not extract duplicate entities. If an entity is mentioned multiple times with the same type, extract it only once.
+
+**Output Format:**
+
+Return ONLY a valid JSON object with NO additional text, markdown, or explanations. The output should be a JSON object with a single key 'entities', which is a list of objects. Each object should have two keys: 'text' and 'type'. Do not include 'start' and 'end' keys.
+
+{{
+  "entities": [
+    {{"text": "exact entity text", "type": "SpecificDisease"}},
+    {{"text": "exact entity text", "type": "DiseaseClass"}},
+    {{"text": "exact entity text", "type": "Modifier"}}
+  ]
+}}
+
+---
+Scientific Text:
+---
+{text}
+---
+"""

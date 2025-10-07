@@ -1,0 +1,8 @@
+google-generativeai
+python-dotenv
+ollama
+PyYAML
+jellyfish
+python-Levenshtein
+scipy
+tqdm
