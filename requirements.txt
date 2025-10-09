@@ -6,3 +6,4 @@ jellyfish
 python-Levenshtein
 scipy
 tqdm
+scikit-learn

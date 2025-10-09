@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from backend.pipeline.graph_extraction.extractor_factory import GraphExtractorFactory
 from data.test.nodes_extraction.preprocessing import load_dataset
 from evaluation.logger import get_logger, save_results
-from evaluation.metrics import evaluate
+from evaluation.metrics import evaluate, evaluate_entity_names
 import time
 from collections import defaultdict
 
@@ -31,6 +31,10 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
     exp_config = config.get("graph_extraction", {})
     model_names = exp_config.get("models", [])
     dataset_names = exp_config.get("datasets", [])
+    if not isinstance(dataset_names, list):
+        logger.error("The 'datasets' parameter in the config file must be a list.")
+        return
+    logger.info(f"Found {len(dataset_names)} dataset(s) to run in config: {', '.join(dataset_names)}")
     provider = exp_config.get("provider")
     max_samples = exp_config.get("max_samples", None)
     fuzzy_threshold = exp_config.get("fuzzy_threshold", 0.85)
@@ -42,27 +46,33 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
     if prompt_settings:
         base_prompt_path = prompt_settings.get("base_path", "")
         try:
+            # Load Node Prompts
             with open(os.path.join(base_prompt_path, prompt_settings["node_system_prompt"]), 'r') as f:
-                system_prompt = f.read()
+                node_system_prompt = f.read()
             with open(os.path.join(base_prompt_path, prompt_settings["node_user_prompt"]), 'r') as f:
-                user_prompt_template = f.read()
+                node_user_prompt_template = f.read()
+            
             
             prompt_data = {
-                "system_prompt": system_prompt, 
-                "user_prompt_template": user_prompt_template,
+                "node_system_prompt": node_system_prompt, 
+                "node_user_prompt_template": node_user_prompt_template,
                 "mode": prompt_settings.get("mode", "standard"),
                 "k": prompt_settings.get("k", 1)
             }
             if prompt_data["mode"] == "interactive":
                 with open(os.path.join(base_prompt_path, prompt_settings["feedback_prompt"]), 'r') as f:
-                    prompt_data["feedback_prompt_template"] = f.read()
+                    prompt_data["node_feedback_prompt_template"] = f.read()
 
             prompts['default'] = prompt_data
         except (IOError, KeyError) as e:
             logger.error(f"Could not load prompt files. Check paths in config.yaml. Error: {e}")
     
     results = {}
-    prompt_summary = defaultdict(lambda: {"total_precision": 0, "total_recall": 0, "total_f1": 0, "count": 0})
+    prompt_summary = defaultdict(lambda: {
+        "total_precision": 0, "total_recall": 0, "total_f1": 0, 
+        "total_sklearn_precision": 0, "total_sklearn_recall": 0, "total_sklearn_f1": 0, 
+        "count": 0
+    })
 
     for model_name in model_names:
         logger.info(f"Loading model: {model_name}")
@@ -100,17 +110,34 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
                     
                     try:
                         predicted_nodes = extractor.extract_nodes(
-                            document_content=text, **prompt_data
+                            document_content=text,
+                            system_prompt=prompt_data["node_system_prompt"],
+                            user_prompt_template=prompt_data["node_user_prompt_template"],
+                            feedback_prompt_template=prompt_data.get("node_feedback_prompt_template"),
+                            mode=prompt_data["mode"],
+                            k=prompt_data["k"]
                         )
                         predicted_entities = [node.properties for node in predicted_nodes]
 
+                        predicted_edges = []
+
                         evaluation_metrics = evaluate(predicted_entities, ground_truth["entities"], fuzzy_threshold=fuzzy_threshold)
+
+                        # New evaluation on entity names
+                        predicted_entity_names = [p['text'].lower() for p in predicted_entities]
+                        ground_truth_entity_names = [gt['text'].lower() for gt in ground_truth["entities"]]
+                        sklearn_metrics = evaluate_entity_names(predicted_entity_names, ground_truth_entity_names)
 
                         # Add to summary data (using fuzzy scores)
                         fuzzy_scores = evaluation_metrics.get("scores", {}).get("fuzzy", {})
                         prompt_summary[prompt_name]["total_precision"] += fuzzy_scores.get("precision", 0)
                         prompt_summary[prompt_name]["total_recall"] += fuzzy_scores.get("recall", 0)
                         prompt_summary[prompt_name]["total_f1"] += fuzzy_scores.get("f1", 0)
+
+                        prompt_summary[prompt_name]["total_sklearn_precision"] += sklearn_metrics.get("precision", 0)
+                        prompt_summary[prompt_name]["total_sklearn_recall"] += sklearn_metrics.get("recall", 0)
+                        prompt_summary[prompt_name]["total_sklearn_f1"] += sklearn_metrics.get("f1", 0)
+
                         prompt_summary[prompt_name]["count"] += 1
 
                         results[model_name][dataset_name][prompt_name].append({
@@ -118,7 +145,8 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
                             "input_text": text,
                             "predicted_entities": predicted_entities,
                             "ground_truth": ground_truth["entities"],
-                            "evaluation": evaluation_metrics
+                            "evaluation": evaluation_metrics,
+                            "sklearn_evaluation": sklearn_metrics
                         })
 
                     except Exception as e:
@@ -141,6 +169,19 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
             logger.info(f"  Average Fuzzy Precision: {avg_precision:.4f}")
             logger.info(f"  Average Fuzzy Recall:    {avg_recall:.4f}")
             logger.info(f"  Average Fuzzy F1-Score:  {avg_f1:.4f}")
+    logger.info("------------------------\n")
+
+    logger.info("\n--- Experiment Summary (Scikit-learn Exact Match) ---")
+    for prompt_name, summary_data in prompt_summary.items():
+        count = summary_data["count"]
+        if count > 0:
+            avg_precision = summary_data["total_sklearn_precision"] / count
+            avg_recall = summary_data["total_sklearn_recall"] / count
+            avg_f1 = summary_data["total_sklearn_f1"] / count
+            logger.info(f"Prompt: {prompt_name}")
+            logger.info(f"  Average Sklearn Precision: {avg_precision:.4f}")
+            logger.info(f"  Average Sklearn Recall:    {avg_recall:.4f}")
+            logger.info(f"  Average Sklearn F1-Score:  {avg_f1:.4f}")
     logger.info("------------------------\n")
 
     logger.info("Experiment finished.")

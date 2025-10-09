@@ -2,9 +2,18 @@ import jellyfish
 from scipy.optimize import linear_sum_assignment
 import numpy as np
 from collections import defaultdict
+from sklearn.metrics import precision_recall_fscore_support
 
-from evaluation.normalization import get_normalized_entity, deduplicate_entities
-
+def _deduplicate_by_text(entities: list[dict]) -> list[dict]:
+    """Removes duplicate entities based on the 'text' field only."""
+    seen = set()
+    deduplicated = []
+    for entity in entities:
+        key = entity['text']
+        if key not in seen:
+            seen.add(key)
+            deduplicated.append(entity)
+    return deduplicated
 
 def calculate_metrics(tp, fp, fn):
     """Calculates precision, recall, and F1-score."""
@@ -21,41 +30,33 @@ def fuzzy_match_score(s1: str, s2: str) -> float:
     lev_sim = 1 - (jellyfish.levenshtein_distance(s1, s2) / max(len(s1), len(s2)))
     return max(jaro_dist, lev_sim)
 
-def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], fuzzy_threshold: float = 0.85):
-    """Implements the advanced NER evaluation plan, comparing text only."""
+def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], fuzzy_threshold: float = 1.0):
+    """Implements a simplified NER evaluation plan based on lowercase text matching."""
 
-    # 1. Normalization and Deduplication
-    norm_preds = [get_normalized_entity(e) for e in predicted_entities]
-    norm_truths = [get_normalized_entity(e) for e in ground_truth_entities]
+    # 1. Lowercase all entity text, as per user request.
+    lower_preds = [{'text': e['text'].lower(), 'type': e['type']} for e in predicted_entities]
+    lower_truths = [{'text': gt['text'].lower(), 'type': gt['type']} for gt in ground_truth_entities]
 
-    pred_dedup = deduplicate_entities(norm_preds)
-    truth_dedup = deduplicate_entities(norm_truths)
+    # 2. Deduplicate based on the lowercased text.
+    pred_dedup = _deduplicate_by_text(lower_preds)
+    truth_dedup = _deduplicate_by_text(lower_truths)
 
     # --- Matching Process ---
     unmatched_preds = list(range(len(pred_dedup)))
     unmatched_truths = list(range(len(truth_dedup)))
-    matches = {"exact": [], "normalized": [], "fuzzy": []}
+    matches = {"exact": [], "fuzzy": []}
     errors = defaultdict(list)
 
-    # Pass 1: Exact Matching
+    # Pass 1: Exact Case-Insensitive Matching
     for i in list(unmatched_preds):
         for j in list(unmatched_truths):
-            if pred_dedup[i]['original_text'] == truth_dedup[j]['original_text']:
+            if pred_dedup[i]['text'] == truth_dedup[j]['text']:
                 matches['exact'].append((i, j))
                 unmatched_preds.remove(i)
                 unmatched_truths.remove(j)
                 break
 
-    # Pass 2: Normalized Matching
-    for i in list(unmatched_preds):
-        for j in list(unmatched_truths):
-            if pred_dedup[i]['text'] == truth_dedup[j]['text']:
-                matches['normalized'].append((i, j))
-                unmatched_preds.remove(i)
-                unmatched_truths.remove(j)
-                break
-
-    # Pass 3: Fuzzy Matching
+    # Pass 2: Fuzzy Matching on remaining items
     if unmatched_preds and unmatched_truths:
         cost_matrix = np.zeros((len(unmatched_preds), len(unmatched_truths)))
         for i, pred_idx in enumerate(unmatched_preds):
@@ -72,30 +73,32 @@ def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], 
                 truth_idx = unmatched_truths[c]
                 matches['fuzzy'].append((pred_idx, truth_idx))
         
-        # Remove matched items from unmatched lists
         matched_preds_in_fuzzy = {unmatched_preds[r] for r, c in zip(row_ind, col_ind) if 1 - cost_matrix[r, c] >= fuzzy_threshold}
         matched_truths_in_fuzzy = {unmatched_truths[c] for r, c in zip(row_ind, col_ind) if 1 - cost_matrix[r, c] >= fuzzy_threshold}
         unmatched_preds = [p for p in unmatched_preds if p not in matched_preds_in_fuzzy]
         unmatched_truths = [t for t in unmatched_truths if t not in matched_truths_in_fuzzy]
 
-
     # --- Calculate TP, FP, FN and Metrics ---
     tp_exact = len(matches['exact'])
-    tp_normalized = tp_exact + len(matches['normalized'])
-    tp_fuzzy = tp_normalized + len(matches['fuzzy'])
+    # "normalized" score is now the same as "exact" because we only lowercase.
+    tp_normalized = tp_exact 
+    tp_fuzzy = tp_exact + len(matches['fuzzy'])
 
     fp = len(unmatched_preds)
     fn = len(unmatched_truths)
 
     scores = {
-        "exact": calculate_metrics(tp_exact, fp + (tp_normalized - tp_exact) + (tp_fuzzy - tp_normalized), fn + (tp_normalized - tp_exact) + (tp_fuzzy - tp_normalized)),
-        "normalized": calculate_metrics(tp_normalized, fp + (tp_fuzzy - tp_normalized), fn + (tp_fuzzy - tp_normalized)),
+        "exact": calculate_metrics(tp_exact, fp + len(matches['fuzzy']), fn + len(matches['fuzzy'])),
+        "normalized": calculate_metrics(tp_normalized, fp + len(matches['fuzzy']), fn + len(matches['fuzzy'])),
         "fuzzy": calculate_metrics(tp_fuzzy, fp, fn)
     }
 
     # --- Error Analysis ---
     errors['boundary_or_other_fp'] = [pred_dedup[i] for i in unmatched_preds]
     errors['boundary_or_other_fn'] = [truth_dedup[j] for j in unmatched_truths]
+
+    print("\n\nPredicted Entities (Deduplicated):", pred_dedup)
+    print("\n\nGround Truth Entities (Deduplicated):", truth_dedup)
 
     # --- Final Output ---
     return {
@@ -105,4 +108,29 @@ def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], 
             "boundary_fp": len(errors['boundary_or_other_fp']),
             "boundary_fn": len(errors['boundary_or_other_fn'])
         }
+    }
+
+def evaluate_entity_names(predicted_entity_names: list[str], ground_truth_entity_names: list[str]):
+    """Calculates precision, recall, and F1-score for lists of entity names using scikit-learn."""
+    
+    pred_set = set(predicted_entity_names)
+    truth_set = set(ground_truth_entity_names)
+    
+    all_labels = sorted(list(pred_set.union(truth_set)))
+    
+    if not all_labels:
+        return {"precision": 1.0, "recall": 1.0, "f1": 1.0, "support": 0}
+        
+    y_pred = [1 if label in pred_set else 0 for label in all_labels]
+    y_true = [1 if label in truth_set else 0 for label in all_labels]
+    
+    precision, recall, f1, support = precision_recall_fscore_support(
+        y_true, y_pred, average='binary', pos_label=1, zero_division=0
+    )
+    
+    return {
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "support": support
     }

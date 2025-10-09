@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from tqdm import tqdm
 
 from dotenv import load_dotenv
 
@@ -12,7 +11,6 @@ from backend.pipeline.graph_extraction.graph_elements import Node, Edge
 from typing import List, Dict
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -52,12 +50,10 @@ class OllamaGraphExtractor(GraphExtractorBase):
                 logger.error("Feedback prompt template is required for interactive mode.")
                 return []
             
-            logger.info(f"--- Running in Interactive Mode for {k} iterations ---")
             feedback_from_previous_run = "None"
             extraction_json_output = ""
 
             for i in range(k):
-                logger.info(f"--- Interactive Iteration {i+1}/{k} ---")
                 
                 # --- 1. Extraction Run (with JSON format) ---
                 current_user_prompt = user_prompt_template.format(text=document_content)
@@ -79,14 +75,14 @@ class OllamaGraphExtractor(GraphExtractorBase):
                 full_feedback_prompt = f"{system_prompt}\n\n{feedback_user_prompt}"
                 feedback_response = self.llm_client.generate(user_prompt=full_feedback_prompt, format="") # No format for feedback
                 feedback_from_previous_run = feedback_response.message
-                logger.info(f"--- Iteration {i + 1} Feedback Received --- \n{feedback_from_previous_run}")
 
             response_message = extraction_json_output
         else: # Standard mode
-            logger.info("--- Running in Standard Mode ---")
             user_prompt = user_prompt_template.format(text=document_content)
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            print("\n\nFull Prompt:", full_prompt)  # Debugging line to print the full prompt
             response = self.llm_client.generate(user_prompt=full_prompt, format="json")
+            
             response_message = response.message
 
         try:
@@ -106,7 +102,7 @@ class OllamaGraphExtractor(GraphExtractorBase):
                     properties=entity
                 ))
             
-            logger.info("--- Ollama JSON parsing and node creation successful ---")
+            #logger.info(f"--- Ollama extracted {len(nodes)} nodes successfully ---")
             return nodes
 
         except (json.JSONDecodeError, AttributeError, Exception) as e:
@@ -114,6 +110,40 @@ class OllamaGraphExtractor(GraphExtractorBase):
             logger.error(f"Problematic response: {response_message}")
             raise e
 
-    def extract_edges(self, document_content: str, ) -> List[Edge]:
-        
-        return []
+    def extract_edges(
+        self, 
+        document_content: str, 
+        nodes: List[Node],
+        system_prompt: str = None,
+        user_prompt_template: str = None,
+        **kwargs) -> List[Edge]:
+        logger.info("--- Calling Ollama LLM for edge extraction ---")
+        if not nodes:
+            logger.info("No nodes provided, skipping edge extraction.")
+            return []
+        if not system_prompt or not user_prompt_template:
+            logger.error("System or user prompt not provided for edge extraction.")
+            return []
+
+        # Serialize nodes for the prompt
+        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('type')})" for node in nodes])
+
+        user_prompt = user_prompt_template.format(text=document_content, nodes=nodes_str)
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+        try:
+            response = self.llm_client.generate(user_prompt=full_prompt, format="json")
+            response_message = response.message
+        except Exception as e:
+            logger.error(f"An error occurred during edge generation: {e}")
+            raise e
+
+        try:
+            data = json.loads(response_message)
+            edges = [Edge(**rel) for rel in data.get("relationships", [])]
+            #logger.info(f"--- Ollama extracted {len(edges)} edges successfully ---")
+            return edges
+        except (json.JSONDecodeError, AttributeError, Exception) as e:
+            logger.error(f"An error occurred parsing the LLM edge response: {e}")
+            logger.error(f"Problematic response: {response_message}")
+            raise e

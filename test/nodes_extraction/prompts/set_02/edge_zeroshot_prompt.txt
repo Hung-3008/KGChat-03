@@ -1,0 +1,15 @@
+Based on the text provided below, identify the relationships between the given list of biomedical entities.
+
+The relationships should be directional, forming a triplet: (source, label, target).
+
+---
+**Text:**
+{text}
+---
+
+---
+**Entities:**
+{nodes}
+---
+
+Extract all relationships and return them in the specified JSON format.

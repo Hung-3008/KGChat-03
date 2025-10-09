@@ -1,0 +1,16 @@
+The previous extraction was not perfect. Please review the text and your last extraction, and provide a corrected and complete list of entities.
+
+**Entity Categories:**
+
+1.  **Disease**: Any disease, syndrome, pathological condition, or sign/symptom.
+2.  **Modifier**: Genes, proteins, or other molecules that are related to a disease.
+
+---
+Scientific Text:
+---
+{document_content}
+---
+Your previous extraction:
+---
+{previous_extraction}
+---

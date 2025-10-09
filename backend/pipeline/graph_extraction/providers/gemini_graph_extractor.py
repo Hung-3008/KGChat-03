@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import time
 from typing import List, Dict
 from tqdm import tqdm
 from dotenv import load_dotenv
@@ -13,7 +12,6 @@ from backend.pipeline.graph_extraction.graph_elements import Node, Edge
 
 load_dotenv()
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
 
 class GeminiGraphExtractor(GraphExtractorBase):
     """Graph extractor for Gemini."""
@@ -64,7 +62,7 @@ class GeminiGraphExtractor(GraphExtractorBase):
         k: int = 1,
         feedback_prompt_template: str = None,
         **kwargs) -> List[Node]:
-        logger.info("--- Calling Gemini LLM for node extraction ---")
+        #logger.info("--- Calling Gemini LLM for node extraction ---")
         
         if not system_prompt or not user_prompt_template:
             logger.error("System or user prompt not provided for node extraction.")
@@ -98,12 +96,11 @@ class GeminiGraphExtractor(GraphExtractorBase):
                 logger.error("Feedback prompt template is required for interactive mode.")
                 return []
             
-            logger.info(f"--- Running in Interactive Mode for {k} iterations ---")
+            #logger.info(f"--- Running in Interactive Mode for {k} iterations ---")
             feedback_from_previous_run = "None"
             extraction_json_output = ""
 
             for i in range(k):
-                logger.info(f"--- Interactive Iteration {i + 1}/{k} ---")
                 
                 # --- 1. Extraction Run (with schema) ---
                 current_user_prompt = initial_user_prompt
@@ -133,11 +130,8 @@ class GeminiGraphExtractor(GraphExtractorBase):
                     response_schema=None # No schema for feedback
                 )
                 
-                logger.info(f"--- Iteration {i + 1} Feedback Received --- \n{feedback_from_previous_run}")
-                
             response_message = extraction_json_output
         else: 
-            logger.info("--- Running in Standard Mode ---")
             response_message = self._generate_with_retry(
                 max_tries=max_tries,
                 user_prompt=initial_user_prompt,
@@ -146,7 +140,6 @@ class GeminiGraphExtractor(GraphExtractorBase):
             )
         
         # --- Final Parsing ---
-        logger.info(f"--- Final Gemini LLM Response --- \n{response_message}")
         try:
             data = json.loads(response_message)
             nodes = []
@@ -156,14 +149,65 @@ class GeminiGraphExtractor(GraphExtractorBase):
                     type=entity.get("type"),
                     properties=entity
                 ))
-            logger.info("--- Gemini JSON parsing and node creation successful ---")
+            #logger.info(f"--- Gemini extracted {len(nodes)} nodes successfully ---")
             return nodes
         except (json.JSONDecodeError, AttributeError) as e:
             logger.error(f"Failed to parse final JSON output: {e}")
             logger.error(f"Problematic response: {response_message}")
             raise e
 
-    def extract_edges(self, document_content: str) -> List[Edge]:
-        
+    def extract_edges(
+        self, 
+        document_content: str, 
+        nodes: List[Node],
+        system_prompt: str = None,
+        user_prompt_template: str = None,
+        **kwargs) -> List[Edge]:
+        #logger.info("--- Calling Gemini LLM for edge extraction ---")
+        if not nodes:
+            logger.info("No nodes provided, skipping edge extraction.")
+            return []
+        if not system_prompt or not user_prompt_template:
+            logger.error("System or user prompt not provided for edge extraction.")
+            return []
 
-        return []
+        # Serialize nodes for the prompt
+        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('type')})" for node in nodes])
+
+        user_prompt = user_prompt_template.format(text=document_content, nodes=nodes_str)
+
+        edge_schema = {
+            "type": "object",
+            "properties": {
+                "relationships": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source": {"type": "string"},
+                            "target": {"type": "string"},
+                            "label": {"type": "string"}
+                        },
+                        "required": ["source", "target", "label"]
+                    }
+                }
+            },
+            "required": ["relationships"]
+        }
+
+        response_message = self._generate_with_retry(
+            max_tries=3,
+            user_prompt=user_prompt,
+            system_prompt=system_prompt,
+            response_schema=edge_schema
+        )
+
+        try:
+            data = json.loads(response_message)
+            edges = [Edge(**rel) for rel in data.get("relationships", [])]
+            #logger.info(f"--- Gemini extracted {len(edges)} edges successfully ---")
+            return edges
+        except (json.JSONDecodeError, AttributeError) as e:
+            logger.error(f"Failed to parse final JSON output for edges: {e}")
+            logger.error(f"Problematic response: {response_message}")
+            raise e

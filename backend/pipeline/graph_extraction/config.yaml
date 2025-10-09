@@ -1,19 +1,21 @@
 graph_extraction:
-  llm_providers:
-    - provider: "ollama"
-      model: "llama3.1:8b"
-    - provider: "gemini"
-      model: "gemini-2.5-flash"
+  provider: "gemini"  # "ollama" or "gemini"
+  models:
+    #- "llama3.1:8b"
+    - "gemini-2.5-flash"
+  datasets:
+    - "NCBItestset_corpus"
   prompt_settings:
-    base_path: "prompts"
-    stages:
-      node_extraction:
-        mode: "interactive"  # options: "interactive", "standard"
-        k: 3  # number of examples to use in interactive mode
-        system_prompt: "extract_nodes/system_prompt.txt"
-        user_prompt_template: "extract_nodes/user_prompt.txt"
-        feedback_prompt: "extract_nodes/feedback_prompt.txt"
+    base_path: "test/nodes_extraction/prompts/set_02"
+    mode: "standard"  # "interactive" or "standard"
+    k: 3 # number of refinement loops for interactive mode
+    node_system_prompt: "node_system_prompt.txt"
+    node_user_prompt: "zeroshot_prompt.txt" # or "fewshot_prompt.txt" or "cot_prompt.txt"
+    feedback_prompt: "feedback_prompt.txt"
 
-      edge_extraction:
-        system_prompt: "extract_edges/system_prompt.txt"
-        user_prompt_template: "extract_edges/user_prompt.txt"
+    edge_system_prompt: "edge_system_prompt.txt"
+    edge_user_prompt: "edge_zeroshot_prompt.txt" # or "edge_fewshot_prompt.txt" or "edge_cot_prompt.txt"
+
+  max_samples: 5 # set to a number or null to process all samples
+  time_between_requests: 3 # seconds to wait between API calls (e.g., for rate limiting)
+  fuzzy_threshold: 0.85

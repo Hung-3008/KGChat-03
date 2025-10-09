@@ -1,0 +1,5 @@
+---
+Scientific Text:
+---
+{document_content}
+---
