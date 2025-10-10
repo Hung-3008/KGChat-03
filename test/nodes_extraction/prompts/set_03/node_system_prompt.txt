@@ -16,12 +16,4 @@ You are an expert biomedical entity extractor. Your task is to identify and clas
 *   The "entities" key should contain a list of objects, where each object has "text" and "type".
 *   Do not include `start` and `end` positions.
 
-**Output Format:**
-```json
-{
-  "entities": [
-    {"text": "exact entity text", "type": "Disease"},
-    {"text": "exact entity text", "type": "Modifier"}
-  ]
-}
-```
+Return output in JSON format

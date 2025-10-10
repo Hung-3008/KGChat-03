@@ -8,9 +8,9 @@ The previous extraction was not perfect. Please review the text and your last ex
 ---
 Scientific Text:
 ---
-{document_content}
+{text}
 ---
 Your previous extraction:
 ---
-{previous_extraction}
+{previous_output}
 ---

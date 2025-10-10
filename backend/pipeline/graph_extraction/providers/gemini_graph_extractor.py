@@ -115,7 +115,7 @@ class GeminiGraphExtractor(GraphExtractorBase):
                     response_schema=node_schema # Always use schema for extraction
                 )
 
-                if i == k - 1:
+                if i == k:
                     break
 
                 # --- 2. Feedback Run (no schema) ---

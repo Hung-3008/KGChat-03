@@ -18,16 +18,16 @@ You are an expert biomedical entity extractor. Your task is to identify and clas
 
 **Output Format:**
 ```json
-{
+{{
   "entities": [
-    {"text": "exact entity text", "type": "Disease"},
-    {"text": "exact entity text", "type": "Modifier"}
+    {{"text": "exact entity text", "type": "Disease"}},
+    {{"text": "exact entity text", "type": "Modifier"}}
   ]
-}
+}}
 ```
 
 ---
 Scientific Text:
 ---
-{document_content}
+{text}
 ---

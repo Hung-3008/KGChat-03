@@ -355,3 +355,4 @@ commands.ipynb
 *.ipynb
 logs/*
 test/nodes_extraction/reports/*
+test_deepseek.py

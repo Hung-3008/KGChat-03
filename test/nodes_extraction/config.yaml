@@ -7,9 +7,9 @@ graph_extraction:
     - "NCBItestset_corpus"
     #- "bc5dr"
   prompt_settings:
-    base_path: "test/nodes_extraction/prompts/set_02"
-    mode: "standard"  # "interactive" or "standard"
-    k: 3 # number of refinement loops for interactive mode
+    base_path: "test/nodes_extraction/prompts/set_03"
+    mode: "interactive"  # "interactive" or "standard"
+    k: 1 # number of refinement loops for interactive mode
     node_system_prompt: "node_system_prompt.txt"
     node_user_prompt: "zeroshot_prompt.txt" # or "fewshot_prompt.txt" or "cot_prompt.txt"
     feedback_prompt: "feedback_prompt.txt"

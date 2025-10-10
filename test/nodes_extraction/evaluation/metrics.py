@@ -97,8 +97,8 @@ def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], 
     errors['boundary_or_other_fp'] = [pred_dedup[i] for i in unmatched_preds]
     errors['boundary_or_other_fn'] = [truth_dedup[j] for j in unmatched_truths]
 
-    print("\n\nPredicted Entities (Deduplicated):", pred_dedup)
-    print("\n\nGround Truth Entities (Deduplicated):", truth_dedup)
+    #print("\n\nPredicted Entities (Deduplicated):", pred_dedup)
+    #print("\n\nGround Truth Entities (Deduplicated):", truth_dedup)
 
     # --- Final Output ---
     return {

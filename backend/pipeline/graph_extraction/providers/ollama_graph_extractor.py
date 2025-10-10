@@ -64,7 +64,9 @@ class OllamaGraphExtractor(GraphExtractorBase):
                 response = self.llm_client.generate(user_prompt=full_prompt, format="json") # Always get JSON
                 extraction_json_output = response.message
 
-                if i == k - 1:
+                print("\n\n Full Prompt:", full_prompt)
+
+                if i == k:
                     break
 
                 # --- 2. Feedback Run (no JSON format) ---
@@ -73,6 +75,7 @@ class OllamaGraphExtractor(GraphExtractorBase):
                     previous_output=extraction_json_output
                 )
                 full_feedback_prompt = f"{system_prompt}\n\n{feedback_user_prompt}"
+                print("\n\nFull Feedback Prompt:", full_feedback_prompt)
                 feedback_response = self.llm_client.generate(user_prompt=full_feedback_prompt, format="") # No format for feedback
                 feedback_from_previous_run = feedback_response.message
 
@@ -80,8 +83,11 @@ class OllamaGraphExtractor(GraphExtractorBase):
         else: # Standard mode
             user_prompt = user_prompt_template.format(text=document_content)
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
-            print("\n\nFull Prompt:", full_prompt)  # Debugging line to print the full prompt
+            print("\n\nFull Prompt:", full_prompt)  
             response = self.llm_client.generate(user_prompt=full_prompt, format="json")
+            #response = self.llm_client.generate(user_prompt=full_prompt)
+
+            print("\n\nLLM Raw Response:", response) 
             
             response_message = response.message
 

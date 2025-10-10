@@ -22,16 +22,16 @@ Third, format the output as a single JSON object.
 
 **Output Format:**
 ```json
-{
+{{
   "entities": [
-    {"text": "exact entity text", "type": "Disease"},
-    {"text": "exact entity text", "type": "Modifier"}
+    {{"text": "exact entity text", "type": "Disease"}},
+    {{"text": "exact entity text", "type": "Modifier"}}
   ]
-}
+}}
 ```
 
 ---
 Scientific Text:
 ---
-{document_content}
+{text}
 ---
