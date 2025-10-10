@@ -262,7 +262,7 @@ weights/
 # Data files
 # data/
 datasets/
-*.csv
+#*.csv
 *.json
 *.jsonl
 *.parquet
