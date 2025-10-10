@@ -2,13 +2,15 @@ graph_extraction:
   provider: "ollama"  # "ollama" or "gemini"
   models:
     - "llama3.1:8b"
+    #- "deepseek-r1:32b"
     #- "gemini-2.5-flash"
+    #- "medllama2:latest"
   datasets:
-    - "NCBItestset_corpus"
-    #- "bc5dr"
+    #- "NCBItestset_corpus"
+    - "bc5dr"
   prompt_settings:
-    base_path: "test/nodes_extraction/prompts/set_03"
-    mode: "interactive"  # "interactive" or "standard"
+    base_path: "test/nodes_extraction/prompts/set_04"
+    mode: "standard"  # "interactive" or "standard"
     k: 1 # number of refinement loops for interactive mode
     node_system_prompt: "node_system_prompt.txt"
     node_user_prompt: "zeroshot_prompt.txt" # or "fewshot_prompt.txt" or "cot_prompt.txt"
@@ -17,6 +19,6 @@ graph_extraction:
     edge_system_prompt: "edge_system_prompt.txt"
     edge_user_prompt: "edge_zeroshot_prompt.txt" # or "edge_fewshot_prompt.txt" or "edge_cot_prompt.txt"
 
-  max_samples: 2 # set to a number or null to process all samples
+  max_samples: 5 # set to a number or null to process all samples
   time_between_requests: 1 # seconds to wait between API calls (e.g., for rate limiting)
-  fuzzy_threshold: 1.0
+  fuzzy_threshold: 0.85

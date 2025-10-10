@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from typing import List, Dict
 from tqdm import tqdm
 from dotenv import load_dotenv
@@ -62,7 +63,6 @@ class GeminiGraphExtractor(GraphExtractorBase):
         k: int = 1,
         feedback_prompt_template: str = None,
         **kwargs) -> List[Node]:
-        #logger.info("--- Calling Gemini LLM for node extraction ---")
         
         if not system_prompt or not user_prompt_template:
             logger.error("System or user prompt not provided for node extraction.")
@@ -77,9 +77,9 @@ class GeminiGraphExtractor(GraphExtractorBase):
                         "type": "object",
                         "properties": {
                             "text": {"type": "string"},
-                            "type": {"type": "string", "enum": ["SpecificDisease", "DiseaseClass", "Modifier"]}
+                            "description": {"type": "string"}
                         },
-                        "required": ["text", "type"]
+                        "required": ["text", "description"]
                     }
                 }
             },
@@ -96,7 +96,6 @@ class GeminiGraphExtractor(GraphExtractorBase):
                 logger.error("Feedback prompt template is required for interactive mode.")
                 return []
             
-            #logger.info(f"--- Running in Interactive Mode for {k} iterations ---")
             feedback_from_previous_run = "None"
             extraction_json_output = ""
 
@@ -144,15 +143,19 @@ class GeminiGraphExtractor(GraphExtractorBase):
             data = json.loads(response_message)
             nodes = []
             for entity in data.get("entities", []):
+                node_text = entity.get("text")
+                node_desc = entity.get("description")
+
+                if not node_text or not node_desc:
+                    raise ValueError(f"Entity with missing 'text' or 'description' found: {entity}")
+
                 nodes.append(Node(
-                    id=entity.get("text"),
-                    type=entity.get("type"),
+                    id=node_text,
                     properties=entity
                 ))
-            #logger.info(f"--- Gemini extracted {len(nodes)} nodes successfully ---")
             return nodes
-        except (json.JSONDecodeError, AttributeError) as e:
-            logger.error(f"Failed to parse final JSON output: {e}")
+        except (json.JSONDecodeError, AttributeError, ValueError) as e:
+            logger.error(f"Failed to parse final JSON output or invalid entity found: {e}")
             logger.error(f"Problematic response: {response_message}")
             raise e
 
@@ -163,7 +166,6 @@ class GeminiGraphExtractor(GraphExtractorBase):
         system_prompt: str = None,
         user_prompt_template: str = None,
         **kwargs) -> List[Edge]:
-        #logger.info("--- Calling Gemini LLM for edge extraction ---")
         if not nodes:
             logger.info("No nodes provided, skipping edge extraction.")
             return []
@@ -172,7 +174,7 @@ class GeminiGraphExtractor(GraphExtractorBase):
             return []
 
         # Serialize nodes for the prompt
-        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('type')})" for node in nodes])
+        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('description')})" for node in nodes])
 
         user_prompt = user_prompt_template.format(text=document_content, nodes=nodes_str)
 
@@ -205,7 +207,6 @@ class GeminiGraphExtractor(GraphExtractorBase):
         try:
             data = json.loads(response_message)
             edges = [Edge(**rel) for rel in data.get("relationships", [])]
-            #logger.info(f"--- Gemini extracted {len(edges)} edges successfully ---")
             return edges
         except (json.JSONDecodeError, AttributeError) as e:
             logger.error(f"Failed to parse final JSON output for edges: {e}")

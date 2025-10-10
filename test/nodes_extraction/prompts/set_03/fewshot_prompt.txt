@@ -1,4 +1,4 @@
-You are an expert biomedical entity extractor. Your task is to identify and classify medical entities from scientific literature into two categories:
+Your task is to identify and classify medical entities from scientific literature into two categories:
 
 **Entity Categories:**
 

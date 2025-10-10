@@ -9,6 +9,7 @@ from evaluation.logger import get_logger, save_results
 from evaluation.metrics import evaluate, evaluate_entity_names
 import time
 from collections import defaultdict
+from tqdm import tqdm
 
 logger = get_logger(__name__, log_file="logs/experiment.log")
 
@@ -98,16 +99,12 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
                 logger.info(f"--- Running with prompt: {prompt_name} ---")
                 results[model_name][dataset_name][prompt_name] = []
                 
-                num_samples_to_process = len(dataset)
+                samples_to_process = dataset
                 if max_samples is not None:
-                    num_samples_to_process = min(len(dataset), max_samples)
+                    samples_to_process = samples_to_process[:max_samples]
 
-                for i, (text, ground_truth) in enumerate(dataset):
-                    if max_samples is not None and i >= max_samples:
-                        break
-
-                    logger.info(f"Processing sample {i+1}/{num_samples_to_process}")
-                    
+                pbar = tqdm(enumerate(samples_to_process), total=len(samples_to_process), desc=f"Model: {model_name}, Dataset: {dataset_name}")
+                for i, (text, ground_truth) in pbar:
                     try:
                         predicted_nodes = extractor.extract_nodes(
                             document_content=text,
@@ -118,8 +115,6 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
                             k=prompt_data["k"]
                         )
                         predicted_entities = [node.properties for node in predicted_nodes]
-
-                        predicted_edges = []
 
                         evaluation_metrics = evaluate(predicted_entities, ground_truth["entities"], fuzzy_threshold=fuzzy_threshold)
 
@@ -150,39 +145,59 @@ def run_experiment(config_path: str = "test/nodes_extraction/config.yaml"):
                         })
 
                     except Exception as e:
-                        logger.error(f"Error during generation for sample {i}: {e}")
+                        #logger.error(f"Error during generation for sample {i}: {e}")
                         results[model_name][dataset_name][prompt_name].append({"sample_id": i, "error": str(e)})
                     
                     if time_between_requests > 0:
                         time.sleep(time_between_requests)
 
-    save_results(results)
-    
-    logger.info("\n--- Experiment Summary (Fuzzy Match) ---")
+    # --- Calculate Averages and Final Report ---
+    summary_report = defaultdict(dict)
     for prompt_name, summary_data in prompt_summary.items():
         count = summary_data["count"]
         if count > 0:
-            avg_precision = summary_data["total_precision"] / count
-            avg_recall = summary_data["total_recall"] / count
-            avg_f1 = summary_data["total_f1"] / count
-            logger.info(f"Prompt: {prompt_name}")
-            logger.info(f"  Average Fuzzy Precision: {avg_precision:.4f}")
-            logger.info(f"  Average Fuzzy Recall:    {avg_recall:.4f}")
-            logger.info(f"  Average Fuzzy F1-Score:  {avg_f1:.4f}")
-    logger.info("------------------------\n")
+            # Fuzzy Match
+            avg_fuzzy_precision = summary_data["total_precision"] / count
+            avg_fuzzy_recall = summary_data["total_recall"] / count
+            avg_fuzzy_f1 = summary_data["total_f1"] / count
+            
+            # Sklearn Exact Match
+            avg_sklearn_precision = summary_data["total_sklearn_precision"] / count
+            avg_sklearn_recall = summary_data["total_sklearn_recall"] / count
+            avg_sklearn_f1 = summary_data["total_sklearn_f1"] / count
 
-    logger.info("\n--- Experiment Summary (Scikit-learn Exact Match) ---")
-    for prompt_name, summary_data in prompt_summary.items():
-        count = summary_data["count"]
-        if count > 0:
-            avg_precision = summary_data["total_sklearn_precision"] / count
-            avg_recall = summary_data["total_sklearn_recall"] / count
-            avg_f1 = summary_data["total_sklearn_f1"] / count
-            logger.info(f"Prompt: {prompt_name}")
-            logger.info(f"  Average Sklearn Precision: {avg_precision:.4f}")
-            logger.info(f"  Average Sklearn Recall:    {avg_recall:.4f}")
-            logger.info(f"  Average Sklearn F1-Score:  {avg_f1:.4f}")
+            summary_report[prompt_name] = {
+                "samples_processed": count,
+                "fuzzy_match_avg": {
+                    "precision": avg_fuzzy_precision,
+                    "recall": avg_fuzzy_recall,
+                    "f1": avg_fuzzy_f1
+                },
+                "sklearn_exact_match_avg": {
+                    "precision": avg_sklearn_precision,
+                    "recall": avg_sklearn_recall,
+                    "f1": avg_sklearn_f1
+                }
+            }
+
+    final_report = {
+        "config": config,
+        "summary": summary_report,
+        "results": results
+    }
+    save_results(final_report)
+    
+    # --- Log Summary to Console ---
+    logger.info("\n--- Experiment Summary ---")
+    for prompt_name, summary in summary_report.items():
+        logger.info(f"Prompt: {prompt_name} ({summary['samples_processed']} samples)")
+        logger.info(f"  Average Fuzzy Precision: {summary['fuzzy_match_avg']['precision']:.4f}")
+        logger.info(f"  Average Fuzzy Recall:    {summary['fuzzy_match_avg']['recall']:.4f}")
+        logger.info(f"  Average Fuzzy F1-Score:  {summary['fuzzy_match_avg']['f1']:.4f}")
+        logger.info(f"  Average Sklearn Precision: {summary['sklearn_exact_match_avg']['precision']:.4f}")
+        logger.info(f"  Average Sklearn Recall:    {summary['sklearn_exact_match_avg']['recall']:.4f}")
+        logger.info(f"  Average Sklearn F1-Score:  {summary['sklearn_exact_match_avg']['f1']:.4f}")
     logger.info("------------------------\n")
 
     logger.info("Experiment finished.")
-    return results
+    return final_report

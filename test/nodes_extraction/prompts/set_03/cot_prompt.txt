@@ -1,4 +1,4 @@
-You are an expert biomedical entity extractor. Your task is to identify and classify medical entities from scientific literature into two categories: Disease and Modifier.
+Your task is to identify and classify medical entities from scientific literature into two categories: Disease and Modifier.
 
 First, think step-by-step about the entities in the text. Identify potential diseases, conditions, genes, and proteins.
 Second, classify each identified entity into one of the two categories.

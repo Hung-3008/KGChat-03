@@ -1,0 +1,46 @@
+To ensure the highest accuracy, please follow this step-by-step reasoning process (Chain of Thought) to analyze the provided scientific text.
+
+**Reasoning Steps:**
+1.  **Scan Sentence-by-Sentence**: Read through the text to identify potential candidate entities. These are typically noun phrases related to biology or medicine.
+2.  **Evaluate Each Candidate**: For each candidate phrase, determine if it fits the definition of a biomedical entity (Disease/Condition, Genetic/Molecular, or Biological Concept) as outlined in the system instructions.
+3.  **Determine Precise Boundaries**: Adjust the text span of the candidate to be as precise as possible. Include necessary specifying adjectives (like 'autosomal recessive') but exclude general ones (like 'severe', 'rare'). Handle conjoined entities as a single unit.
+4.  **Formulate a Description**: For each valid entity, write a brief, clear description of what it is.
+5.  **Consolidate into Final JSON**: After analyzing the entire text, compile all the valid entities and their descriptions into the final JSON format.
+
+---
+**Illustrative Example of the Thought Process:**
+
+**Text:** "Mutations in the SMAD4/DPC4 tumor suppressor gene... are involved in 50% of pancreatic cancers."
+
+**Thought Process:**
+1.  **Scan**: I see three potential candidates: "Mutations", "SMAD4/DPC4 tumor suppressor gene", and "pancreatic cancers".
+2.  **Evaluate**:
+    * "pancreatic cancers" is a specific type of disease. It's a valid entity.
+    * "SMAD4/DPC4 tumor suppressor gene" is a specific gene with its function described. It's a valid entity.
+    * "Mutations" by itself is too general. However, "Mutations in the SMAD4/DPC4 tumor suppressor gene" is more specific but overlaps with the gene entity. The most distinct entities here are the gene itself and the disease.
+3.  **Boundaries**: The boundaries for "SMAD4/DPC4 tumor suppressor gene" and "pancreatic cancers" are correct as is.
+4.  **Description**:
+    * For "SMAD4/DPC4 tumor suppressor gene": "A specific gene with a described function as a tumor suppressor."
+    * For "pancreatic cancers": "A specific type of cancer affecting the pancreas."
+5.  **Consolidate**: I will add these two objects to my JSON list.
+
+---
+
+Now, apply this Chain of Thought process to the following text. First, show your reasoning step-by-step in a `<thought>` block. After your reasoning, provide the final JSON output.
+---
+Scientific Text:
+---
+{text}
+---
+
+**Sample Output Format:**
+```json
+{{
+  "entities": [
+    {{"text": "exact entity text", "description": "...."}},
+    {{"text": "exact entity text", "description": "...."}}
+  ]
+}}
+```
+
+

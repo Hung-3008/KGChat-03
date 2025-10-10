@@ -1,0 +1,17 @@
+Analyze the following scientific text and extract all biomedical entities based on the instructions provided.
+
+---
+Scientific Text:
+---
+{text}
+---
+
+**Sample Output Format:**
+```json
+{{
+  "entities": [
+    {{"text": "exact entity text", "description": "...."}},
+    {{"text": "exact entity text", "description": "...."}}
+  ]
+}}
+```

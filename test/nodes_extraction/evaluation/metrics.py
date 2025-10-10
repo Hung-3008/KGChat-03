@@ -34,7 +34,7 @@ def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], 
     """Implements a simplified NER evaluation plan based on lowercase text matching."""
 
     # 1. Lowercase all entity text, as per user request.
-    lower_preds = [{'text': e['text'].lower(), 'type': e['type']} for e in predicted_entities]
+    lower_preds = [{'text': e['text'].lower(), 'type': e['description']} for e in predicted_entities]
     lower_truths = [{'text': gt['text'].lower(), 'type': gt['type']} for gt in ground_truth_entities]
 
     # 2. Deduplicate based on the lowercased text.
@@ -96,9 +96,6 @@ def evaluate(predicted_entities: list[dict], ground_truth_entities: list[dict], 
     # --- Error Analysis ---
     errors['boundary_or_other_fp'] = [pred_dedup[i] for i in unmatched_preds]
     errors['boundary_or_other_fn'] = [truth_dedup[j] for j in unmatched_truths]
-
-    #print("\n\nPredicted Entities (Deduplicated):", pred_dedup)
-    #print("\n\nGround Truth Entities (Deduplicated):", truth_dedup)
 
     # --- Final Output ---
     return {

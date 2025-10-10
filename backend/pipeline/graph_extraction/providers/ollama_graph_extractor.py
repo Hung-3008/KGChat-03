@@ -64,8 +64,6 @@ class OllamaGraphExtractor(GraphExtractorBase):
                 response = self.llm_client.generate(user_prompt=full_prompt, format="json") # Always get JSON
                 extraction_json_output = response.message
 
-                print("\n\n Full Prompt:", full_prompt)
-
                 if i == k:
                     break
 
@@ -75,7 +73,6 @@ class OllamaGraphExtractor(GraphExtractorBase):
                     previous_output=extraction_json_output
                 )
                 full_feedback_prompt = f"{system_prompt}\n\n{feedback_user_prompt}"
-                print("\n\nFull Feedback Prompt:", full_feedback_prompt)
                 feedback_response = self.llm_client.generate(user_prompt=full_feedback_prompt, format="") # No format for feedback
                 feedback_from_previous_run = feedback_response.message
 
@@ -83,37 +80,32 @@ class OllamaGraphExtractor(GraphExtractorBase):
         else: # Standard mode
             user_prompt = user_prompt_template.format(text=document_content)
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
-            print("\n\nFull Prompt:", full_prompt)  
             response = self.llm_client.generate(user_prompt=full_prompt, format="json")
-            #response = self.llm_client.generate(user_prompt=full_prompt)
-
-            print("\n\nLLM Raw Response:", response) 
-            
+            #print("\n--- Raw Response from Ollama ---", response.message) 
             response_message = response.message
 
         try:
-            logger.info(f"--- Final Ollama LLM Response --- \n{response_message}")
-            
             data = json.loads(response_message)
             
             nodes = []
             for entity in data.get("entities", []):
-                node_type = entity.get("type")
-                if isinstance(node_type, list):
-                    node_type = node_type[0] if node_type else None
+                node_text = entity.get("text")
+                node_desc = entity.get("description")
+
+                if not node_text or not node_desc:
+                    raise ValueError(f"Entity with missing 'text' or 'description' found: {entity}")
 
                 nodes.append(Node(
-                    id=entity.get("text"),  # Or generate a unique ID
-                    type=node_type,
+                    id=node_text,
                     properties=entity
                 ))
             
-            #logger.info(f"--- Ollama extracted {len(nodes)} nodes successfully ---")
+            logger.info(f"--- Ollama extracted {len(nodes)} nodes successfully ---")
             return nodes
 
         except (json.JSONDecodeError, AttributeError, Exception) as e:
-            logger.error(f"An error occurred parsing the LLM response: {e}")
-            logger.error(f"Problematic response: {response_message}")
+            #logger.error(f"An error occurred parsing the LLM response: {e}")
+            #logger.error(f"Problematic response: {response_message}")
             raise e
 
     def extract_edges(
@@ -132,7 +124,7 @@ class OllamaGraphExtractor(GraphExtractorBase):
             return []
 
         # Serialize nodes for the prompt
-        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('type')})" for node in nodes])
+        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('description')})" for node in nodes])
 
         user_prompt = user_prompt_template.format(text=document_content, nodes=nodes_str)
         full_prompt = f"{system_prompt}\n\n{user_prompt}"
@@ -147,7 +139,7 @@ class OllamaGraphExtractor(GraphExtractorBase):
         try:
             data = json.loads(response_message)
             edges = [Edge(**rel) for rel in data.get("relationships", [])]
-            #logger.info(f"--- Ollama extracted {len(edges)} edges successfully ---")
+            logger.info(f"--- Ollama extracted {len(edges)} edges successfully ---")
             return edges
         except (json.JSONDecodeError, AttributeError, Exception) as e:
             logger.error(f"An error occurred parsing the LLM edge response: {e}")

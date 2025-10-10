@@ -260,7 +260,7 @@ checkpoints/
 weights/
 
 # Data files
-data/
+# data/
 datasets/
 *.csv
 *.json

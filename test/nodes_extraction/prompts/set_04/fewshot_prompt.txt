@@ -1,0 +1,69 @@
+Based on the instructions provided, analyze the scientific text to extract all biomedical entities. Here are a few examples of how to perform the task:
+
+---
+**Example 1**
+
+**Input Text:**
+"The tumour suppressor gene PTEN... was identified as the susceptibility gene for two hamartoma syndromes - Cowden disease (CD; MIM 158350) and Bannayan-Zonana (BZS)... Somatic PTEN deletions and mutations were observed in sporadic breast, brain, prostate and kidney cancer."
+
+**Output JSON:**
+{{
+  "entities": [
+    {{
+      "text": "tumour suppressor gene PTEN",
+      "description": "A specific gene with a described function as a tumor suppressor."
+    }},
+    {{
+      "text": "hamartoma syndromes",
+      "description": "A class of genetic syndromes characterized by hamartomas."
+    }},
+    {{
+      "text": "Cowden disease",
+      "description": "A specific genetic disorder that is a type of hamartoma syndrome."
+    }},
+    {{
+      "text": "Bannayan-Zonana",
+      "description": "A specific syndrome, also known as a hamartoma syndrome."
+    }},
+    {{
+      "text": "Somatic PTEN deletions and mutations",
+      "description": "Types of genetic variations (deletions and mutations) occurring in the PTEN gene in non-germline cells."
+    }},
+    {{
+      "text": "sporadic breast, brain, prostate and kidney cancer",
+      "description": "A composite mention of several types of cancer that are not inherited."
+    }}
+  ]
+}}
+---
+**Example 2**
+
+**Input Text:**
+"Hereditary deficiency of the fifth component of complement in man... The proband, a 20-year-old black female with systemic lupus erythematosus since age 11, lacked serum hemolytic complement activity... Other observations indicate that the C5D state is compatible with normal coagulation function."
+
+**Output JSON:**
+{{
+  "entities": [
+    {{
+      "text": "Hereditary deficiency of the fifth component of complement",
+      "description": "A specific inherited disorder related to the complement system."
+    }},
+    {{
+      "text": "systemic lupus erythematosus",
+      "description": "A specific autoimmune disease."
+    }},
+    {{
+      "text": "C5D state",
+      "description": "A pathological state referring to the deficiency of complement component C5."
+    }}
+  ]
+}}
+---
+
+Now, analyze the following new scientific text and provide the JSON output.
+
+---
+Scientific Text:
+---
+{text}
+---
