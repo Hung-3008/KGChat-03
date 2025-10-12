@@ -19,6 +19,6 @@ graph_extraction:
     edge_system_prompt: "edge_system_prompt.txt"
     edge_user_prompt: "edge_zeroshot_prompt.txt" # or "edge_fewshot_prompt.txt" or "edge_cot_prompt.txt"
 
-  max_samples: 5 # set to a number or null to process all samples
+  max_samples: 100 # set to a number or null to process all samples
   time_between_requests: 1 # seconds to wait between API calls (e.g., for rate limiting)
   fuzzy_threshold: 0.85
