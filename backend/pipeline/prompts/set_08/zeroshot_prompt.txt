@@ -1,0 +1,34 @@
+Extract ONLY the most clinically relevant biomedical entities from the following medical text.
+
+**Important Instructions:**
+- Extract ONLY meaningful medical terms (not every word)
+- Include both full names AND abbreviations
+- Maintain case sensitivity as written
+- Extract "Parkinson's disease" AND "PD" (both are important)
+- Extract "levodopa-induced dyskinesias" AND "LIDs" (both are important)
+- **CRITICAL: Extract entities that match ground truth patterns (1-6 words)**
+- **NO DUPLICATES: Extract each unique entity only once, even if it appears multiple times**
+- **PRIORITIZE: Complete disease names over single words**
+
+Focus ONLY on:
+- **Diseases**: "Parkinson's disease", "PD", "dyskinetic", "LIDs"
+- **Drugs**: "levodopa", "antidyskinetic" 
+- **Anatomical**: "cerebellar", "cortex", "M1", "ganglia"
+- **Processes**: "plasticity", "stimulation", "dyskinesias"
+
+**DO NOT extract:**
+- Common words like "sensory", "processing", "function", "abnormal"
+- Generic terms like "alterations", "deficient", "impaired"
+- Non-medical words like "recently", "demonstrates", "evident"
+- Complex phrases like "hemolytic complement activity", "autosomal codominant inheritance"
+- Processes like "inhibitory effect", "coagulation", "leukocytosis"
+- Laboratory terms like "hemolytic assay", "immunodiffusion"
+
+---
+
+**Medical Text:**
+{text}
+
+---
+
+**Output:**

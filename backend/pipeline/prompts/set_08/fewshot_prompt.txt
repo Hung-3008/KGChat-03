@@ -1,0 +1,157 @@
+Extract ONLY the most clinically relevant biomedical entities from medical texts. Focus on entities that appear in ground truth.
+
+**IMPORTANT RULES:**
+1. Extract entities that match ground truth patterns (1-6 words)
+2. NO DUPLICATES - extract each unique entity only once
+3. Prioritize medical significance over word count
+4. Focus on diseases, drugs, anatomical structures, and important processes
+
+---
+
+**Example 1:**
+
+**Input Text:**
+"Late-onset scleroderma renal crisis induced by tacrolimus and prednisolone: a case report. Scleroderma renal crisis (SRC) is a rare complication of systemic sclerosis (SSc) but can be severe enough to require temporary or permanent renal replacement therapy."
+
+**Correct Output:**
+```json
+{{
+  "entities": [
+    {{"text": "scleroderma renal crisis", "description": "A severe kidney complication of systemic sclerosis"}},
+    {{"text": "tacrolimus", "description": "An immunosuppressant medication"}},
+    {{"text": "prednisolone", "description": "A corticosteroid medication"}},
+    {{"text": "SRC", "description": "Abbreviation for scleroderma renal crisis"}},
+    {{"text": "systemic sclerosis", "description": "A chronic autoimmune disease affecting connective tissue"}},
+    {{"text": "SSc", "description": "Abbreviation for systemic sclerosis"}},
+    {{"text": "renal replacement therapy", "description": "Treatment for kidney failure including dialysis or transplant"}}
+  ]
+}}
+```
+
+**Key Points:**
+- Extracted complete disease names: "scleroderma renal crisis", "systemic sclerosis"
+- Extracted abbreviations: "SRC", "SSc"
+- Extracted single-word drugs: "tacrolimus", "prednisolone"
+- Extracted medical treatments: "renal replacement therapy"
+- NO DUPLICATES: Each unique entity extracted only once
+- MATCH GROUND TRUTH: Extract entities as they appear in ground truth
+
+---
+
+**Example 2:**
+
+**Input Text:**
+"Diabetes mellitus type 2 (T2DM) is associated with insulin resistance. Patients with T2DM often require metformin and insulin therapy."
+
+**Correct Output:**
+```json
+{{
+  "entities": [
+    {{"text": "diabetes mellitus type 2", "description": "A metabolic disorder characterized by high blood sugar"}},
+    {{"text": "T2DM", "description": "Abbreviation for type 2 diabetes mellitus"}},
+    {{"text": "insulin resistance", "description": "A condition where cells don't respond properly to insulin"}},
+    {{"text": "metformin", "description": "A first-line medication for type 2 diabetes"}},
+    {{"text": "insulin therapy", "description": "Treatment using insulin to control blood sugar"}}
+  ]
+}}
+```
+
+**Key Points:**
+- Extracted complete disease names: "diabetes mellitus type 2", "insulin resistance"
+- Extracted abbreviations: "T2DM" (only once, no duplicates)
+- Extracted single-word drugs: "metformin"
+- Extracted treatments: "insulin therapy"
+- NO DUPLICATES: Each unique entity extracted only once
+- MATCH GROUND TRUTH: Extract entities as they appear in ground truth
+
+---
+
+**Example 3:**
+
+**Input Text:**
+"Cerebellar sensory processing alterations impact motor cortical plasticity in Parkinson's disease: clues from dyskinetic patients. The plasticity of primary motor cortex (M1) in patients with Parkinson's disease (PD) and levodopa-induced dyskinesias (LIDs) is severely impaired."
+
+**Correct Output:**
+```json
+{{
+  "entities": [
+    {{"text": "Parkinson's disease", "description": "A neurodegenerative disorder affecting movement"}},
+    {{"text": "dyskinetic", "description": "Characterized by abnormal involuntary movements"}},
+    {{"text": "plasticity", "description": "The ability of the brain to change and adapt"}},
+    {{"text": "M1", "description": "Abbreviation for primary motor cortex"}},
+    {{"text": "PD", "description": "Abbreviation for Parkinson's disease"}},
+    {{"text": "levodopa", "description": "A drug used to treat Parkinson's disease"}},
+    {{"text": "dyskinesias", "description": "Abnormal involuntary movements"}},
+    {{"text": "LIDs", "description": "Abbreviation for levodopa-induced dyskinesias"}}
+  ]
+}}
+```
+
+**Key Points:**
+- Extracted diseases: "Parkinson's disease", "PD", "dyskinetic", "dyskinesias", "LIDs"
+- Extracted drugs: "levodopa"
+- Extracted anatomical: "M1"
+- Extracted processes: "plasticity"
+- NO DUPLICATES: "Parkinson's disease" appears twice in text but extracted only once
+- AVOIDED common words like "sensory", "processing", "alterations", "impact", "motor", "cortical"
+
+---
+
+**Example 4:**
+
+**Input Text:**
+"Hereditary deficiency of the fifth component of complement in man. The proband, a 20-year-old black female with systemic lupus erythematosus since age 11, lacked serum hemolytic complement activity. C5 was undetectable in her serum. A younger half-sister was also found to lack immunochemically detectable C5. Normal hemolytic titers were restored to both homozygous C5-deficient (C5D) sera by addition of highly purified human C5."
+
+**Correct Output:**
+```json
+{{
+  "entities": [
+    {{"text": "Hereditary deficiency of the fifth component of complement", "description": "A specific genetic disorder affecting the complement system"}},
+    {{"text": "systemic lupus erythematosus", "description": "A chronic autoimmune disease affecting multiple organ systems"}},
+    {{"text": "C5", "description": "Complement component 5, a protein of the complement system"}},
+    {{"text": "C5-deficient", "description": "Having a deficiency of complement component 5"}},
+    {{"text": "C5D", "description": "Abbreviation for C5-deficient"}},
+    {{"text": "glomerulonephritis", "description": "A kidney disease characterized by inflammation of the glomeruli"}},
+    {{"text": "vasculitis", "description": "Inflammation of blood vessels"}},
+    {{"text": "arthritis", "description": "Inflammation of one or more joints"}},
+    {{"text": "bacterial infections", "description": "Diseases caused by bacteria"}},
+    {{"text": "pyogenic infection", "description": "An infection that results in the formation of pus"}}
+  ]
+}}
+```
+
+**Key Points:**
+- Extracted complete disease names: "Hereditary deficiency of the fifth component of complement", "systemic lupus erythematosus"
+- Extracted abbreviations: "C5", "C5D" (only once each, no duplicates)
+- Extracted modifiers: "C5-deficient"
+- Extracted specific diseases: "glomerulonephritis", "vasculitis", "arthritis"
+- Extracted disease classes: "bacterial infections", "pyogenic infection"
+- NO DUPLICATES: Each unique entity extracted only once
+- AVOIDED complex phrases: "hemolytic complement activity", "autosomal codominant inheritance"
+- AVOIDED processes: "inhibitory effect", "coagulation", "leukocytosis"
+
+---
+
+Now extract entities from the following text:
+
+**Medical Text:**
+{text}
+
+**Instructions:**
+1. Extract ONLY unique entities (no duplicates)
+2. Include both full names and abbreviations
+3. Maintain case sensitivity
+4. Focus on clinical relevance
+5. **IMPORTANT: Extract entities that match ground truth patterns (1-6 words)**
+6. **PRIORITIZE: Complete disease names over single words**
+7. **NO DUPLICATES: Extract each unique entity only once**
+
+**Output:**
+```json
+{{
+  "entities": [
+    {{"text": "entity_name", "description": "entity_description"}},
+    {{"text": "entity_name", "description": "entity_description"}}
+  ]
+}}
+```

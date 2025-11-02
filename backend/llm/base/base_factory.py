@@ -33,7 +33,7 @@ class BaseFactory(Generic[T, C]):
             self._configs[name] = config_class
         self._metadata[name] = metadata or {}
         
-        logger.info(f"Registered client '{name}'")
+    # registration recorded; avoid noisy logging
     
     def create_client(self, name: str, config: Optional[C] = None, **kwargs) -> T:
 

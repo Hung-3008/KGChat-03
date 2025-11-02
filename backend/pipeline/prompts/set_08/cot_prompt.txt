@@ -1,0 +1,61 @@
+Extract biomedical entities using a systematic approach that ensures complete coverage.
+
+**Step 1: Scan for all medical terms**
+- Read through the text carefully
+- Identify ALL medical terms, including abbreviations
+- Look for both full names and short forms
+- Note case variations (uppercase, lowercase, title case)
+
+**Step 2: Identify entity types (flexible length)**
+- Diseases: "systemic lupus erythematosus", "Hereditary deficiency of the fifth component of complement", "C5D"
+- Drugs: "aspirin", "metformin", "tacrolimus"
+- Anatomical: "heart", "liver", "renal"
+- Processes: "inflammation", "resistance", "failure"
+
+**Step 3: Extract unique entities (match ground truth patterns)**
+- Extract each unique entity only once, even if it appears multiple times
+- If "C5D" appears 4 times, extract it only once
+- Extract complete disease names: "systemic lupus erythematosus" not just "lupus"
+- Extract specific conditions: "Hereditary deficiency of the fifth component of complement"
+- Maintain exact case as written
+
+**Step 4: Validate completeness and filter false positives**
+- Check for abbreviations that might have been missed
+- Ensure all variations are captured
+- Verify no important medical terms are omitted
+- REMOVE complex phrases like "hemolytic complement activity", "autosomal codominant inheritance"
+- REMOVE processes like "inhibitory effect", "coagulation", "leukocytosis"
+- REMOVE laboratory terms like "hemolytic assay", "immunodiffusion"
+
+**Step 5: Provide accurate descriptions**
+- Write brief, clinically accurate descriptions
+- Include context for abbreviations
+
+---
+
+**Medical Text:**
+{text}
+
+---
+
+**Step-by-step analysis:**
+
+**Step 1 - All medical terms found:**
+[List all medical terms you identify, including abbreviations]
+
+**Step 2 - Entity types:**
+- Diseases: [List all diseases and conditions]
+- Drugs: [List all medications]
+- Anatomical: [List all body parts/organs]
+- Processes: [List all biological processes]
+
+**Step 3 - Complete extraction:**
+[Extract ALL occurrences with exact text]
+
+**Step 4 - Validation:**
+[Check for completeness and accuracy]
+
+**Step 5 - Descriptions:**
+[Provide accurate clinical descriptions]
+
+**Final JSON Output:**

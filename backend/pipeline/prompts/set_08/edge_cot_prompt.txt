@@ -1,0 +1,33 @@
+Please analyze the following text and identify relationships between the medical entities. Use chain-of-thought reasoning to systematically identify relationships.
+
+**Text to analyze:**
+{text}
+
+**Available entities:**
+{nodes}
+
+**Chain-of-thought analysis:**
+
+1. **Step 1 - Identify entity pairs**: Look for pairs of entities that appear together in the text and may have relationships.
+
+2. **Step 2 - Analyze context**: For each potential pair, examine the surrounding text to understand the nature of their relationship.
+
+3. **Step 3 - Classify relationship**: Determine the type of relationship based on the context and medical knowledge.
+
+4. **Step 4 - Verify relationship**: Ensure the relationship is explicitly stated or clearly implied in the text.
+
+**Relationship extraction process:**
+- Read through the text carefully
+- Identify where entities co-occur
+- Analyze the linguistic patterns and medical context
+- Determine the relationship type based on the evidence
+- Extract only relationships that are clearly supported by the text
+
+**Examples of relationship patterns:**
+- "X causes Y" → Causes relationship
+- "X treats Y" → Treats relationship  
+- "X is associated with Y" → Associated_with relationship
+- "X is part of Y" → Part_of relationship
+- "X is located in Y" → Located_in relationship
+
+Now extract the relationships following this systematic approach.

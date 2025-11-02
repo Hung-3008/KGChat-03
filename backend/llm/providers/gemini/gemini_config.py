@@ -1,6 +1,8 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from pydantic import Field
 from ...base.llm_config import BaseLLMConfig
+from ...utils.config_builder import build_generation_config
+
 
 class GeminiConfig(BaseLLMConfig):
     model_name: str = Field(default="gemini-1.5-flash")
@@ -10,14 +12,7 @@ class GeminiConfig(BaseLLMConfig):
     response_mime_type: Optional[str] = None
 
     def get_generation_config(self) -> Dict[str, Any]:
-        config = {
-            "max_output_tokens": self.max_tokens,
-            "temperature": self.temperature,
-        }
-        if self.top_p is not None:
-            config["top_p"] = self.top_p
-        if self.top_k is not None:
-            config["top_k"] = self.top_k
+        cfg = build_generation_config(self, field_map={"max_tokens": "max_output_tokens"})
         if self.response_mime_type:
-            config["response_mime_type"] = self.response_mime_type
-        return config
+            cfg["response_mime_type"] = self.response_mime_type
+        return cfg

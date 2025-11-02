@@ -7,3 +7,7 @@ python-Levenshtein
 scipy
 tqdm
 scikit-learn
+pandas
+langchain
+openai
+tiktoken

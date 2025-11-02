@@ -1,21 +1,13 @@
 import json
-import logging
 import os
-
-from dotenv import load_dotenv
+from typing import Union
 
 from backend.llm.base import BaseLLMClient
 from backend.llm.factory import llm_registry
 from backend.pipeline.graph_extraction.base import GraphExtractorBase
-from backend.pipeline.graph_extraction.graph_elements import Node, Edge
-from typing import List, Dict
-
-load_dotenv()
-logger = logging.getLogger(__name__)
 
 
 class OllamaGraphExtractor(GraphExtractorBase):
-    """Graph extractor for Ollama."""
 
     def __init__(self, model_name: str = None, api_url: str = None):
         if model_name is None:
@@ -29,119 +21,21 @@ class OllamaGraphExtractor(GraphExtractorBase):
             api_url=api_url,
         )
 
-    def extract_nodes(
-        self, 
-        document_content: str, 
-        system_prompt: str = None, 
-        user_prompt_template: str = None,
-        mode: str = "standard",
-        k: int = 1,
-        feedback_prompt_template: str = None,
-        **kwargs) -> List[Node]:
-        logger.info("--- Calling Ollama LLM for node extraction ---")
+    def _call_llm(self, user_prompt: str, system_prompt: str = None, response_schema: dict = None, max_tries: int = 1, **kwargs) -> Union[str, dict]:
+        full_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
+        fmt = "json" if response_schema is not None else ""
+        response = self.llm_client.generate(user_prompt=full_prompt, format=fmt)
+        if response_schema and fmt == "json":
+            try:
+                return json.loads(response.message)
+            except json.JSONDecodeError:
+                return response.message
+        return response.message
 
-        if not system_prompt or not user_prompt_template:
-            logger.error("System or user prompt not found for node extraction.")
-            return []
+    def extract_nodes(self, document_content: str, system_prompt: str = None, user_prompt_template: str = None, mode: str = "standard", k: int = 1, feedback_prompt_template: str = None, **kwargs):
+        node_schema = {}
+        return super().extract_nodes(document_content, system_prompt=system_prompt, user_prompt_template=user_prompt_template, mode=mode, k=k, feedback_prompt_template=feedback_prompt_template, response_schema=node_schema, **kwargs)
 
-        response_message = ""
-        if mode == "interactive":
-            if not feedback_prompt_template:
-                logger.error("Feedback prompt template is required for interactive mode.")
-                return []
-            
-            feedback_from_previous_run = "None"
-            extraction_json_output = ""
-
-            for i in range(k):
-                
-                # --- 1. Extraction Run (with JSON format) ---
-                current_user_prompt = user_prompt_template.format(text=document_content)
-                if i > 0:
-                    current_user_prompt += f"\n\nUse the following feedback to improve your answer:\n{feedback_from_previous_run}"
-
-                full_prompt = f"{system_prompt}\n\n{current_user_prompt}"
-                response = self.llm_client.generate(user_prompt=full_prompt, format="json") # Always get JSON
-                extraction_json_output = response.message
-
-                if i == k:
-                    break
-
-                # --- 2. Feedback Run (no JSON format) ---
-                feedback_user_prompt = feedback_prompt_template.format(
-                    text=document_content, 
-                    previous_output=extraction_json_output
-                )
-                full_feedback_prompt = f"{system_prompt}\n\n{feedback_user_prompt}"
-                feedback_response = self.llm_client.generate(user_prompt=full_feedback_prompt, format="") # No format for feedback
-                feedback_from_previous_run = feedback_response.message
-
-            response_message = extraction_json_output
-        else: # Standard mode
-            user_prompt = user_prompt_template.format(text=document_content)
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
-            response = self.llm_client.generate(user_prompt=full_prompt, format="json")
-            #print("\n--- Raw Response from Ollama ---", response.message) 
-            response_message = response.message
-
-        try:
-            data = json.loads(response_message)
-            
-            nodes = []
-            for entity in data.get("entities", []):
-                node_text = entity.get("text")
-                node_desc = entity.get("description")
-
-                if not node_text or not node_desc:
-                    raise ValueError(f"Entity with missing 'text' or 'description' found: {entity}")
-
-                nodes.append(Node(
-                    id=node_text,
-                    properties=entity
-                ))
-            
-            logger.info(f"--- Ollama extracted {len(nodes)} nodes successfully ---")
-            return nodes
-
-        except (json.JSONDecodeError, AttributeError, Exception) as e:
-            #logger.error(f"An error occurred parsing the LLM response: {e}")
-            #logger.error(f"Problematic response: {response_message}")
-            raise e
-
-    def extract_edges(
-        self, 
-        document_content: str, 
-        nodes: List[Node],
-        system_prompt: str = None,
-        user_prompt_template: str = None,
-        **kwargs) -> List[Edge]:
-        logger.info("--- Calling Ollama LLM for edge extraction ---")
-        if not nodes:
-            logger.info("No nodes provided, skipping edge extraction.")
-            return []
-        if not system_prompt or not user_prompt_template:
-            logger.error("System or user prompt not provided for edge extraction.")
-            return []
-
-        # Serialize nodes for the prompt
-        nodes_str = "\n".join([f"- {node.properties.get('text')} ({node.properties.get('description')})" for node in nodes])
-
-        user_prompt = user_prompt_template.format(text=document_content, nodes=nodes_str)
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
-
-        try:
-            response = self.llm_client.generate(user_prompt=full_prompt, format="json")
-            response_message = response.message
-        except Exception as e:
-            logger.error(f"An error occurred during edge generation: {e}")
-            raise e
-
-        try:
-            data = json.loads(response_message)
-            edges = [Edge(**rel) for rel in data.get("relationships", [])]
-            logger.info(f"--- Ollama extracted {len(edges)} edges successfully ---")
-            return edges
-        except (json.JSONDecodeError, AttributeError, Exception) as e:
-            logger.error(f"An error occurred parsing the LLM edge response: {e}")
-            logger.error(f"Problematic response: {response_message}")
-            raise e
+    def extract_edges(self, document_content: str, nodes, system_prompt: str = None, user_prompt_template: str = None, **kwargs):
+        edge_schema = {}
+        return super().extract_edges(document_content, nodes, system_prompt=system_prompt, user_prompt_template=user_prompt_template, response_schema=edge_schema, **kwargs)

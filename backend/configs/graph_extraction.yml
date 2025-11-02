@@ -1,0 +1,22 @@
+graph_extraction:
+  provider: "ollama"
+  models:
+    - "llama3.1:8b"
+  datasets:
+    - "data/500_samples_pmc"
+  embedding_model: "snowflake-arctic-embed:22m"
+  
+  prompt_settings:
+    base_path: "backend/pipeline/prompts/set_08"
+    mode: "standard"
+    k: 3
+    node_system_prompt: "node_system_prompt.txt"
+    node_user_prompt: "zeroshot_prompt.txt"
+    feedback_prompt: "feedback_prompt.txt"
+
+    edge_system_prompt: "edge_system_prompt.txt"
+    edge_user_prompt: "edge_cot_prompt.txt"
+
+  max_samples: 2
+  time_between_requests: 3
+  fuzzy_threshold: 0.7

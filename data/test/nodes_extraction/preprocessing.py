@@ -1,6 +1,7 @@
 import os
 import csv
 import ast
+import json
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -83,6 +84,53 @@ DATASET_LOADERS = {
 }
 
 def load_dataset(dataset_name: str):
-    if dataset_name not in DATASET_LOADERS:
-        raise ValueError(f"Unknown dataset: {dataset_name}")
-    return DATASET_LOADERS[dataset_name]()
+    # First, support known dataset keys
+    if dataset_name in DATASET_LOADERS:
+        return DATASET_LOADERS[dataset_name]()
+
+    # Next, support a filesystem path (directory of JSON files or a single CSV/JSON file)
+    if os.path.exists(dataset_name):
+        # If a directory, attempt to load JSON files (e.g., PMC result JSONs)
+        if os.path.isdir(dataset_name):
+            dataset = []
+            for fname in sorted(os.listdir(dataset_name)):
+                if not fname.lower().endswith('.json'):
+                    continue
+                file_path = os.path.join(dataset_name, fname)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        doc = json.load(f)
+                except Exception:
+                    # skip unreadable files
+                    continue
+
+                # Collect text from content_sections if available
+                content_sections = doc.get('content_sections') or doc.get('content', [])
+                if isinstance(content_sections, list):
+                    text = "\n\n".join([s.get('content', '') for s in content_sections if isinstance(s, dict)])
+                else:
+                    # fallback to raw text fields
+                    text = doc.get('text') or doc.get('abstract') or ''
+
+                dataset.append((text, doc.get('metadata', {})))
+
+            return dataset
+
+        # If a single file, support CSVs handled above or JSON
+        if os.path.isfile(dataset_name):
+            if dataset_name.lower().endswith('.json'):
+                try:
+                    with open(dataset_name, 'r', encoding='utf-8') as f:
+                        doc = json.load(f)
+                except Exception:
+                    raise ValueError(f"Failed to read JSON dataset: {dataset_name}")
+
+                content_sections = doc.get('content_sections') or doc.get('content', [])
+                if isinstance(content_sections, list):
+                    text = "\n\n".join([s.get('content', '') for s in content_sections if isinstance(s, dict)])
+                else:
+                    text = doc.get('text') or doc.get('abstract') or ''
+
+                return [(text, doc.get('metadata', {}))]
+
+    raise ValueError(f"Unknown dataset: {dataset_name}")

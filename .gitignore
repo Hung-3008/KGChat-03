@@ -350,9 +350,9 @@ site/
 # gcloud/
 # .aws/
 # .azure/
-backend/configs/llm/llm_configs.yml
 commands.ipynb
 *.ipynb
 logs/*
 test/nodes_extraction/reports/*
 test_deepseek.py
+data/500_samples_pmc/*

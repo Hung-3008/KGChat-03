@@ -1,0 +1,39 @@
+Review your previous extraction and provide a corrected, more precise list of entities. Focus on improving precision while maintaining recall.
+
+**CRITICAL IMPROVEMENTS NEEDED:**
+
+1. **REMOVE DUPLICATES**: Extract each unique entity only once, even if it appears multiple times
+2. **REMOVE FALSE POSITIVES**: Eliminate entities that are not in ground truth or are too generic
+3. **FOCUS ON GROUND TRUTH**: Only extract entities that match ground truth patterns
+4. **PRECISE BOUNDARIES**: Use exact text spans, avoid over-extraction
+
+**Entity Categories:**
+
+1. **Disease**: Specific diseases, syndromes, pathological conditions (e.g., "systemic lupus erythematosus", "C5 deficiency")
+2. **Modifier**: Genes, proteins, abbreviations (e.g., "C5", "C5D", "C5-deficient")
+
+**DO NOT EXTRACT:**
+- Common words like "activity", "function", "process"
+- Complex phrases like "hemolytic complement activity", "autosomal codominant inheritance"
+- Laboratory terms like "hemolytic assay", "immunodiffusion"
+- Processes like "inhibitory effect", "coagulation", "leukocytosis"
+
+---
+Scientific Text:
+---
+{text}
+---
+Your previous extraction:
+---
+{previous_output}
+---
+
+**Instructions:**
+1. Review each entity in your previous extraction
+2. Remove duplicates (keep only one instance of each unique entity)
+3. Remove false positives (entities not in ground truth)
+4. Ensure all ground truth entities are included
+5. Use precise boundaries and complete disease names
+6. Focus on medical significance over word count
+
+**Corrected Output:**

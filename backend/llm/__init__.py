@@ -1,10 +1,7 @@
 from .base import BaseLLMClient, BaseLLMConfig, LLMResponse
 from .factory import llm_registry
-from .providers.gemini import GeminiClient, GeminiConfig
-from .providers.ollama import OllamaClient, OllamaConfig
 
 def initialize():
-    """Initialize the LLM system by registering all providers"""
     try:
         llm_registry.register_all_providers()
     except Exception as e:
@@ -19,8 +16,5 @@ __all__ = [
     "BaseLLMClient",
     "BaseLLMConfig", 
     "LLMResponse",
-    "llm_registry",
-    "GeminiClient",
-    "OllamaClient",
-    "OllamaConfig"
+    "llm_registry"
 ]

@@ -1,7 +1,7 @@
 import yaml
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 from ..utils.exceptions import ClientNotFoundError
 
@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 class LLMRegistry:
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path or "backend/llm/configs/llm_configs.yml"
+        # default to centralized config location
+        self.config_path = config_path or "backend/configs/llm_configs.yml"
         self.config_data: Dict[str, Any] = {}
         self._clients: Dict[str, type] = {}
         self._configs: Dict[str, type] = {}
@@ -19,7 +20,7 @@ class LLMRegistry:
         try:
             config_file = Path(self.config_path)
             if not config_file.exists():
-                logger.warning(f"Config file not found: {self.config_path}")
+                # no config found; leave config_data empty
                 return
             
             with open(config_file, 'r', encoding='utf-8') as f:
@@ -27,7 +28,7 @@ class LLMRegistry:
                 content = self._substitute_env_vars(content)
                 self.config_data = yaml.safe_load(content) or {}
             
-            logger.info(f"Loaded config from {self.config_path}")
+            # config loaded
         except Exception as e:
             logger.error(f"Failed to load config: {e}")
             self.config_data = {}
@@ -57,11 +58,9 @@ class LLMRegistry:
         for provider_name, provider_config in providers.items():
             try:
                 self._register_provider(provider_name, provider_config)
-            except Exception as e:
-                logger.error(f"Failed to register {provider_name}: {e}")
+            except Exception:
+                # skip faulty providers
                 continue
-        
-        logger.info(f"Registered {len(providers)} providers")
     
     def _register_provider(self, name: str, config: Dict[str, Any]) -> None:
         client_path = config.get('client')
@@ -72,12 +71,10 @@ class LLMRegistry:
         
         client_class = self._import_class(client_path)
         config_class = self._import_class(config_path) if config_path else None
-        
+
         self._clients[name] = client_class
         self._configs[name] = config_class
         self._defaults[name] = config.get('defaults', {})
-        
-        logger.info(f"Registered {name}")
     
     def get_default_provider(self) -> Optional[str]:
         return self.config_data.get('default_provider')
@@ -107,9 +104,40 @@ class LLMRegistry:
         
         config = config_class(**final_config)
         return client_class(config)
+
+    def embed_texts(self, texts: List[str], provider_name: Optional[str] = None, model: Optional[str] = None, max_tries: int = 3, **overrides) -> List[List[float]]:
+        """Convenience helper to generate embeddings using a provider's client.
+
+        - texts: list of input strings
+        - provider_name: optional provider (defaults to registry default)
+        - model: optional embedding model override
+        - max_tries: passed to provider client if supported
+        - overrides: other config overrides passed when constructing the client
+        """
+        if not provider_name:
+            provider_name = self.get_default_provider()
+
+        client = self.create_llm_client(provider_name=provider_name, **overrides)
+
+        # Prefer a batch embed API if available
+        if hasattr(client, 'embed'):
+            try:
+                # many providers accept (texts, model=..., max_tries=...)
+                return client.embed(texts, model=model, max_tries=max_tries)
+            except TypeError:
+                # fallback: try without named args
+                return client.embed(texts)
+
+        # If client only provides single-text embed (e.g., embed(text)), call per-text
+        if hasattr(client, 'embed_single'):
+            embeddings = []
+            for t in texts:
+                embeddings.append(client.embed_single(t, model=model, max_tries=max_tries))
+            return embeddings
+
+        raise NotImplementedError(f"Provider '{provider_name}' does not implement embedding API")
     
     def get_available_providers(self) -> list:
-        """Get list of available providers"""
         return list(self._clients.keys())
 
 llm_registry = LLMRegistry()
