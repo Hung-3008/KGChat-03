@@ -1,0 +1,8 @@
+LLM:
+  client: ollama
+  model: llama3.1:8b
+
+
+Encoder:
+  model_name: intfloat/multilingual-e5-base
+  device: cuda
