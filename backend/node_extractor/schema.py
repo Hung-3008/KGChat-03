@@ -1,59 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
-
-
-# Mapping TUI codes to semantic type names for better output
-TUI_TO_SEMTYPE = {
-    "T204": "Eukaryote", "T002": "Plant", "T004": "Fungus", "T007": "Bacterium",
-    "T013": "Fish", "T012": "Bird", "T015": "Mammal", "T005": "Virus",
-    "T014": "Reptile", "T011": "Amphibian", "T194": "Archaeon", "T001": "Organism",
-    "T008": "Animal", "T016": "Human", "T010": "Vertebrate",
-    "T023": "Body Part, Organ, or Organ Component", "T029": "Body Location or Region",
-    "T030": "Body Space or Junction", "T026": "Cell Component", "T024": "Tissue",
-    "T025": "Cell", "T032": "Organism Attribute", "T022": "Body System",
-    "T018": "Embryonic Structure", "T017": "Anatomical Structure",
-    "T021": "Fully Formed Anatomical Structure", "T019": "Congenital Abnormality",
-    "T190": "Anatomical Abnormality", "T020": "Acquired Abnormality",
-    "T028": "Gene or Genome", "T086": "Nucleotide Sequence", "T087": "Amino Acid Sequence",
-    "T085": "Molecular Sequence", "T088": "Carbohydrate Sequence",
-    "T047": "Disease or Syndrome", "T037": "Injury or Poisoning", "T191": "Neoplastic Process",
-    "T048": "Mental or Behavioral Dysfunction", "T050": "Experimental Model of Disease",
-    "T033": "Finding", "T184": "Sign or Symptom", "T034": "Laboratory or Test Result",
-    "T046": "Pathologic Function", "T044": "Molecular Function", "T043": "Cell Function",
-    "T049": "Cell or Molecular Dysfunction", "T040": "Organism Function",
-    "T045": "Genetic Function", "T042": "Organ or Tissue Function",
-    "T039": "Physiologic Function", "T038": "Biologic Function", "T041": "Mental Process",
-    "T067": "Phenomenon or Process", "T070": "Natural Phenomenon or Process",
-    "T068": "Human-caused Phenomenon or Process", "T069": "Environmental Effect of Humans",
-    "T109": "Organic Chemical", "T167": "Substance", "T197": "Inorganic Chemical",
-    "T131": "Hazardous or Poisonous Substance", "T196": "Element, Ion, or Isotope",
-    "T104": "Chemical Viewed Structurally", "T120": "Chemical Viewed Functionally",
-    "T103": "Chemical", "T200": "Clinical Drug", "T121": "Pharmacologic Substance",
-    "T116": "Amino Acid, Peptide, or Protein", "T123": "Biologically Active Substance",
-    "T129": "Immunologic Factor", "T126": "Enzyme", "T114": "Nucleic Acid, Nucleoside, or Nucleotide",
-    "T195": "Antibiotic", "T192": "Receptor", "T125": "Hormone", "T127": "Vitamin",
-    "T130": "Indicator, Reagent, or Diagnostic Aid",
-    "T061": "Therapeutic or Preventive Procedure", "T060": "Diagnostic Procedure",
-    "T059": "Laboratory Procedure", "T063": "Molecular Biology Research Technique",
-    "T074": "Medical Device", "T122": "Biomedical or Dental Material",
-    "T203": "Drug Delivery Device", "T075": "Research Device", "T073": "Manufactured Object",
-    "T072": "Physical Object", "T058": "Health Care Activity", "T065": "Educational Activity",
-    "T062": "Research Activity", "T057": "Occupational Activity", "T054": "Social Behavior",
-    "T055": "Individual Behavior", "T056": "Daily or Recreational Activity",
-    "T052": "Activity", "T051": "Event", "T066": "Machine Activity", "T053": "Behavior",
-    "T201": "Clinical Attribute", "T170": "Intellectual Product", "T081": "Quantitative Concept",
-    "T168": "Food", "T080": "Qualitative Concept", "T169": "Functional Concept",
-    "T082": "Spatial Concept", "T079": "Temporal Concept", "T078": "Idea or Concept",
-    "T185": "Classification", "T031": "Body Substance", "T171": "Language",
-    "T077": "Conceptual Entity", "T102": "Group Attribute", "T071": "Entity",
-    "T097": "Professional or Occupational Group", "T098": "Population Group",
-    "T093": "Health Care Related Organization", "T091": "Biomedical Occupation or Discipline",
-    "T090": "Occupation or Discipline", "T064": "Governmental or Regulatory Activity",
-    "T089": "Regulation or Law", "T092": "Organization", "T099": "Family Group",
-    "T101": "Patient or Disabled Group", "T100": "Age Group",
-    "T095": "Self-help or Relief Organization", "T096": "Group", "T094": "Professional Society",
-    "T083": "Geographic Area"
-}
+from typing import List, Optional, Dict
 
 
 class ExtractedEntity(BaseModel):
@@ -67,216 +13,191 @@ class ExtractedEntity(BaseModel):
     semantic_type: str = Field(..., description="UMLS TUI code for the semantic type")
 
 
-# ---------------------------------------------------------------------------
-# Output schemas for each prompt group (1..15) based on UMLS Semantic Groups
-# Each schema maps the TUI codes used in the corresponding prompt group
-# to a list of ExtractedEntity objects. Fields default to empty lists.
-# ---------------------------------------------------------------------------
+class ActivityOutput(BaseModel):
+    """Schema for ACTIVITY_PROMPT extraction results.
+    
+    Contains lists of extracted entities grouped by semantic category (activity type).
+    Each category field contains a list of entity names that belong to that semantic type.
+    """
+    behavior: List[str] = Field(default_factory=list, description="Category T053 (Behavior): Entities describing general behavioral activities")
+    social_behavior: List[str] = Field(default_factory=list, description="Category T054 (Social Behavior): Entities describing social or interpersonal behaviors")
+    individual_behavior: List[str] = Field(default_factory=list, description="Category T055 (Individual Behavior): Entities describing individual personal behaviors")
+    daily_or_recreational_activity: List[str] = Field(default_factory=list, description="Category T056 (Daily or Recreational Activity): Entities describing everyday or leisure activities")
+    occupational_activity: List[str] = Field(default_factory=list, description="Category T057 (Occupational Activity): Entities describing work-related activities")
+    health_care_activity: List[str] = Field(default_factory=list, description="Category T058 (Health Care Activity): Entities describing healthcare-related activities")
+    laboratory_procedure: List[str] = Field(default_factory=list, description="Category T059 (Laboratory Procedure): Entities describing laboratory procedures and tests")
+    diagnostic_procedure: List[str] = Field(default_factory=list, description="Category T060 (Diagnostic Procedure): Entities describing diagnostic procedures and examinations")
+    therapeutic_or_preventive_procedure: List[str] = Field(default_factory=list, description="Category T061 (Therapeutic or Preventive Procedure): Entities describing treatment or preventive procedures")
+    research_activity: List[str] = Field(default_factory=list, description="Category T062 (Research Activity): Entities describing research activities and studies")
+    molecular_biology_research_technique: List[str] = Field(default_factory=list, description="Category T063 (Molecular Biology Research Technique): Entities describing molecular biology research methods")
+    governmental_or_regulatory_activity: List[str] = Field(default_factory=list, description="Category T064 (Governmental or Regulatory Activity): Entities describing regulatory or governmental activities")
+    educational_activity: List[str] = Field(default_factory=list, description="Category T065 (Educational Activity): Entities describing educational or training activities")
+    machine_activity: List[str] = Field(default_factory=list, description="Category T066 (Machine Activity): Entities describing machine or automated activities")
 
 
-class Group1ActivitiesOutput(BaseModel):
-    """Output schema for Group 1: Activities & Behaviors."""
-    T052: List[ExtractedEntity] = Field(default_factory=list, description="Activity")
-    T053: List[ExtractedEntity] = Field(default_factory=list, description="Behavior")
-    T054: List[ExtractedEntity] = Field(default_factory=list, description="Social Behavior")
-    T055: List[ExtractedEntity] = Field(default_factory=list, description="Individual Behavior")
-    T056: List[ExtractedEntity] = Field(default_factory=list, description="Daily or Recreational Activity")
-    T057: List[ExtractedEntity] = Field(default_factory=list, description="Occupational Activity")
-    T058: List[ExtractedEntity] = Field(default_factory=list, description="Health Care Activity")
-    T062: List[ExtractedEntity] = Field(default_factory=list, description="Research Activity")
-    T064: List[ExtractedEntity] = Field(default_factory=list, description="Governmental or Regulatory Activity")
-    T065: List[ExtractedEntity] = Field(default_factory=list, description="Educational Activity")
-    T066: List[ExtractedEntity] = Field(default_factory=list, description="Machine Activity")
+class PhenomenonOutput(BaseModel):
+    """Schema for PHENOMENON_PROMPT extraction results.
+    
+    Contains lists of extracted entities grouped by semantic category (phenomenon/process type).
+    Each category field contains a list of entity names that belong to that semantic type.
+    """
+    injury_or_poisoning: List[str] = Field(default_factory=list, description="Category T037 (Injury or Poisoning): Entities describing injuries or poisoning incidents")
+    human_caused_phenomenon_or_process: List[str] = Field(default_factory=list, description="Category T068 (Human-caused Phenomenon or Process): Entities describing phenomena or processes caused by humans")
+    environmental_effect_of_humans: List[str] = Field(default_factory=list, description="Category T069 (Environmental Effect of Humans): Entities describing environmental effects caused by human activities")
+    natural_phenomenon_or_process: List[str] = Field(default_factory=list, description="Category T070 (Natural Phenomenon or Process): Entities describing natural phenomena or processes")
+    biologic_function: List[str] = Field(default_factory=list, description="Category T038 (Biologic Function): Entities describing biological functions")
+    physiologic_function: List[str] = Field(default_factory=list, description="Category T039 (Physiologic Function): Entities describing physiological functions and processes")
+    organism_function: List[str] = Field(default_factory=list, description="Category T040 (Organism Function): Entities describing overall organism functions")
+    mental_process: List[str] = Field(default_factory=list, description="Category T041 (Mental Process): Entities describing mental or cognitive processes")
+    organ_or_tissue_function: List[str] = Field(default_factory=list, description="Category T042 (Organ or Tissue Function): Entities describing functions of organs or tissues")
+    cell_function: List[str] = Field(default_factory=list, description="Category T043 (Cell Function): Entities describing cellular functions")
+    molecular_function: List[str] = Field(default_factory=list, description="Category T044 (Molecular Function): Entities describing molecular-level functions")
+    genetic_function: List[str] = Field(default_factory=list, description="Category T045 (Genetic Function): Entities describing genetic functions and processes")
+    pathologic_function: List[str] = Field(default_factory=list, description="Category T046 (Pathologic Function): Entities describing abnormal or pathological functions")
+    disease_or_syndrome: List[str] = Field(default_factory=list, description="Category T047 (Disease or Syndrome): Entities describing diseases or syndromes")
+    mental_or_behavioral_dysfunction: List[str] = Field(default_factory=list, description="Category T048 (Mental or Behavioral Dysfunction): Entities describing mental or behavioral disorders")
+    neoplastic_process: List[str] = Field(default_factory=list, description="Category T191 (Neoplastic Process): Entities describing neoplastic or cancerous processes")
+    cell_or_molecular_dysfunction: List[str] = Field(default_factory=list, description="Category T049 (Cell or Molecular Dysfunction): Entities describing cellular or molecular dysfunctions")
+    experimental_model_of_disease: List[str] = Field(default_factory=list, description="Category T050 (Experimental Model of Disease): Entities describing experimental disease models")
 
 
-class Group2AnatomyOutput(BaseModel):
-    """Output schema for Group 2: Anatomy."""
-    T017: List[ExtractedEntity] = Field(default_factory=list, description="Anatomical Structure")
-    T018: List[ExtractedEntity] = Field(default_factory=list, description="Embryonic Structure")
-    T021: List[ExtractedEntity] = Field(default_factory=list, description="Fully Formed Anatomical Structure")
-    T022: List[ExtractedEntity] = Field(default_factory=list, description="Body System")
-    T023: List[ExtractedEntity] = Field(default_factory=list, description="Body Part, Organ, or Organ Component")
-    T024: List[ExtractedEntity] = Field(default_factory=list, description="Tissue")
-    T025: List[ExtractedEntity] = Field(default_factory=list, description="Cell")
-    T026: List[ExtractedEntity] = Field(default_factory=list, description="Cell Component")
-    T029: List[ExtractedEntity] = Field(default_factory=list, description="Body Location or Region")
-    T030: List[ExtractedEntity] = Field(default_factory=list, description="Body Space or Junction")
+class PhysicalObjectOutput(BaseModel):
+    """Schema for PHYSICAL_OBJECT_PROMPT extraction results.
+    
+    Contains lists of extracted entities grouped by semantic category (physical object type).
+    Each category field contains a list of entity names that belong to that semantic type.
+    """
+    # Organisms
+    organism: List[str] = Field(default_factory=list, description="Category T001 (Organism): Entities describing organisms")
+    virus: List[str] = Field(default_factory=list, description="Category T005 (Virus): Entities describing viruses")
+    bacterium: List[str] = Field(default_factory=list, description="Category T007 (Bacterium): Entities describing bacteria")
+    archaeon: List[str] = Field(default_factory=list, description="Category T194 (Archaeon): Entities describing archaea")
+    eukaryote: List[str] = Field(default_factory=list, description="Category T204 (Eukaryote): Entities describing eukaryotes")
+    plant: List[str] = Field(default_factory=list, description="Category T002 (Plant): Entities describing plants")
+    fungus: List[str] = Field(default_factory=list, description="Category T004 (Fungus): Entities describing fungi")
+    animal: List[str] = Field(default_factory=list, description="Category T008 (Animal): Entities describing animals")
+    vertebrate: List[str] = Field(default_factory=list, description="Category T010 (Vertebrate): Entities describing vertebrates")
+    amphibian: List[str] = Field(default_factory=list, description="Category T011 (Amphibian): Entities describing amphibians")
+    bird: List[str] = Field(default_factory=list, description="Category T012 (Bird): Entities describing birds")
+    fish: List[str] = Field(default_factory=list, description="Category T013 (Fish): Entities describing fish")
+    reptile: List[str] = Field(default_factory=list, description="Category T014 (Reptile): Entities describing reptiles")
+    mammal: List[str] = Field(default_factory=list, description="Category T015 (Mammal): Entities describing mammals")
+    human: List[str] = Field(default_factory=list, description="Category T016 (Human): Entities describing humans")
+    
+    # Anatomical Structures
+    anatomical_structure: List[str] = Field(default_factory=list, description="Category T017 (Anatomical Structure): Entities describing anatomical structures")
+    embryonic_structure: List[str] = Field(default_factory=list, description="Category T018 (Embryonic Structure): Entities describing embryonic structures")
+    fully_formed_anatomical_structure: List[str] = Field(default_factory=list, description="Category T021 (Fully Formed Anatomical Structure): Entities describing fully developed anatomical structures")
+    body_part_organ_or_organ_component: List[str] = Field(default_factory=list, description="Category T023 (Body Part, Organ, or Organ Component): Entities describing body parts, organs, or organ components")
+    tissue: List[str] = Field(default_factory=list, description="Category T024 (Tissue): Entities describing tissues")
+    cell: List[str] = Field(default_factory=list, description="Category T025 (Cell): Entities describing cells")
+    cell_component: List[str] = Field(default_factory=list, description="Category T026 (Cell Component): Entities describing cellular components")
+    gene_or_genome: List[str] = Field(default_factory=list, description="Category T028 (Gene or Genome): Entities describing genes or genomes")
+    anatomical_abnormality: List[str] = Field(default_factory=list, description="Category T190 (Anatomical Abnormality): Entities describing anatomical abnormalities")
+    congenital_abnormality: List[str] = Field(default_factory=list, description="Category T019 (Congenital Abnormality): Entities describing congenital abnormalities")
+    acquired_abnormality: List[str] = Field(default_factory=list, description="Category T020 (Acquired Abnormality): Entities describing acquired abnormalities")
+    
+    # Manufactured Objects
+    manufactured_object: List[str] = Field(default_factory=list, description="Category T073 (Manufactured Object): Entities describing manufactured objects")
+    medical_device: List[str] = Field(default_factory=list, description="Category T074 (Medical Device): Entities describing medical devices")
+    drug_delivery_device: List[str] = Field(default_factory=list, description="Category T203 (Drug Delivery Device): Entities describing drug delivery devices")
+    research_device: List[str] = Field(default_factory=list, description="Category T075 (Research Device): Entities describing research devices")
+    clinical_drug: List[str] = Field(default_factory=list, description="Category T200 (Clinical Drug): Entities describing clinical drugs")
+    
+    # Substances
+    substance: List[str] = Field(default_factory=list, description="Category T167 (Substance): Entities describing substances")
+    body_substance: List[str] = Field(default_factory=list, description="Category T031 (Body Substance): Entities describing body substances")
+    chemical: List[str] = Field(default_factory=list, description="Category T103 (Chemical): Entities describing chemicals")
+    chemical_viewed_structurally: List[str] = Field(default_factory=list, description="Category T104 (Chemical Viewed Structurally): Entities describing chemicals by their structural properties")
+    organic_chemical: List[str] = Field(default_factory=list, description="Category T109 (Organic Chemical): Entities describing organic chemicals")
+    nucleic_acid_nucleoside_or_nucleotide: List[str] = Field(default_factory=list, description="Category T114 (Nucleic Acid, Nucleoside, or Nucleotide): Entities describing nucleic acids and related compounds")
+    amino_acid_peptide_or_protein: List[str] = Field(default_factory=list, description="Category T116 (Amino Acid, Peptide, or Protein): Entities describing proteins and related compounds")
+    element_ion_or_isotope: List[str] = Field(default_factory=list, description="Category T196 (Element, Ion, or Isotope): Entities describing elements and their forms")
+    inorganic_chemical: List[str] = Field(default_factory=list, description="Category T197 (Inorganic Chemical): Entities describing inorganic chemicals")
+    chemical_viewed_functionally: List[str] = Field(default_factory=list, description="Category T120 (Chemical Viewed Functionally): Entities describing chemicals by their functional properties")
+    pharmacologic_substance: List[str] = Field(default_factory=list, description="Category T121 (Pharmacologic Substance): Entities describing pharmacologic substances")
+    antibiotic: List[str] = Field(default_factory=list, description="Category T195 (Antibiotic): Entities describing antibiotics")
+    biomedical_or_dental_material: List[str] = Field(default_factory=list, description="Category T122 (Biomedical or Dental Material): Entities describing biomedical or dental materials")
+    biologically_active_substance: List[str] = Field(default_factory=list, description="Category T123 (Biologically Active Substance): Entities describing biologically active substances")
+    hormone: List[str] = Field(default_factory=list, description="Category T125 (Hormone): Entities describing hormones")
+    enzyme: List[str] = Field(default_factory=list, description="Category T126 (Enzyme): Entities describing enzymes")
+    vitamin: List[str] = Field(default_factory=list, description="Category T127 (Vitamin): Entities describing vitamins")
+    immunologic_factor: List[str] = Field(default_factory=list, description="Category T129 (Immunologic Factor): Entities describing immunologic factors")
+    receptor: List[str] = Field(default_factory=list, description="Category T192 (Receptor): Entities describing receptors")
+    indicator_reagent_or_diagnostic_aid: List[str] = Field(default_factory=list, description="Category T130 (Indicator, Reagent, or Diagnostic Aid): Entities describing diagnostic indicators and reagents")
+    hazardous_or_poisonous_substance: List[str] = Field(default_factory=list, description="Category T131 (Hazardous or Poisonous Substance): Entities describing hazardous or poisonous substances")
+    food: List[str] = Field(default_factory=list, description="Category T168 (Food): Entities describing food items")
 
 
-class Group3ChemicalsOutput(BaseModel):
-    """Output schema for Group 3: Chemicals & Drugs."""
-    T103: List[ExtractedEntity] = Field(default_factory=list, description="Chemical")
-    T104: List[ExtractedEntity] = Field(default_factory=list, description="Chemical Viewed Structurally")
-    T109: List[ExtractedEntity] = Field(default_factory=list, description="Organic Chemical")
-    T114: List[ExtractedEntity] = Field(default_factory=list, description="Nucleic Acid, Nucleoside, or Nucleotide")
-    T116: List[ExtractedEntity] = Field(default_factory=list, description="Amino Acid, Peptide, or Protein")
-    T120: List[ExtractedEntity] = Field(default_factory=list, description="Chemical Viewed Functionally")
-    T121: List[ExtractedEntity] = Field(default_factory=list, description="Pharmacologic Substance")
-    T122: List[ExtractedEntity] = Field(default_factory=list, description="Biomedical or Dental Material")
-    T123: List[ExtractedEntity] = Field(default_factory=list, description="Biologically Active Substance")
-    T125: List[ExtractedEntity] = Field(default_factory=list, description="Hormone")
-    T126: List[ExtractedEntity] = Field(default_factory=list, description="Enzyme")
-    T127: List[ExtractedEntity] = Field(default_factory=list, description="Vitamin")
-    T129: List[ExtractedEntity] = Field(default_factory=list, description="Immunologic Factor")
-    T130: List[ExtractedEntity] = Field(default_factory=list, description="Indicator, Reagent, or Diagnostic Aid")
-    T131: List[ExtractedEntity] = Field(default_factory=list, description="Hazardous or Poisonous Substance")
-    T167: List[ExtractedEntity] = Field(default_factory=list, description="Substance")
-    T192: List[ExtractedEntity] = Field(default_factory=list, description="Receptor")
-    T195: List[ExtractedEntity] = Field(default_factory=list, description="Antibiotic")
-    T196: List[ExtractedEntity] = Field(default_factory=list, description="Element, Ion, or Isotope")
-    T197: List[ExtractedEntity] = Field(default_factory=list, description="Inorganic Chemical")
-    T200: List[ExtractedEntity] = Field(default_factory=list, description="Clinical Drug")
+class ConceptualEntityOutput(BaseModel):
+    """Schema for CONCEPTUAL_ENTITY_PROMPT extraction results.
+    
+    Contains lists of extracted entities grouped by semantic category (conceptual entity type).
+    Each category field contains a list of entity names that belong to that semantic type.
+    """
+    # Organism Attribute & Finding
+    organism_attribute: List[str] = Field(default_factory=list, description="Category T032 (Organism Attribute): Entities describing attributes of organisms")
+    clinical_attribute: List[str] = Field(default_factory=list, description="Category T201 (Clinical Attribute): Entities describing clinical attributes")
+    finding: List[str] = Field(default_factory=list, description="Category T033 (Finding): Entities describing clinical findings")
+    laboratory_or_test_result: List[str] = Field(default_factory=list, description="Category T034 (Laboratory or Test Result): Entities describing laboratory or test results")
+    sign_or_symptom: List[str] = Field(default_factory=list, description="Category T184 (Sign or Symptom): Entities describing clinical signs or symptoms")
+    
+    # Idea or Concept
+    idea_or_concept: List[str] = Field(default_factory=list, description="Category T078 (Idea or Concept): Entities describing ideas or concepts")
+    temporal_concept: List[str] = Field(default_factory=list, description="Category T079 (Temporal Concept): Entities describing time-related concepts")
+    qualitative_concept: List[str] = Field(default_factory=list, description="Category T080 (Qualitative Concept): Entities describing qualitative concepts")
+    quantitative_concept: List[str] = Field(default_factory=list, description="Category T081 (Quantitative Concept): Entities describing quantitative or measurement concepts")
+    spatial_concept: List[str] = Field(default_factory=list, description="Category T082 (Spatial Concept): Entities describing spatial concepts")
+    body_location_or_region: List[str] = Field(default_factory=list, description="Category T029 (Body Location or Region): Entities describing body locations or regions")
+    body_space_or_junction: List[str] = Field(default_factory=list, description="Category T030 (Body Space or Junction): Entities describing body spaces or junctions")
+    geographic_area: List[str] = Field(default_factory=list, description="Category T083 (Geographic Area): Entities describing geographic areas")
+    molecular_sequence: List[str] = Field(default_factory=list, description="Category T085 (Molecular Sequence): Entities describing molecular sequences")
+    nucleotide_sequence: List[str] = Field(default_factory=list, description="Category T086 (Nucleotide Sequence): Entities describing nucleotide sequences")
+    amino_acid_sequence: List[str] = Field(default_factory=list, description="Category T087 (Amino Acid Sequence): Entities describing amino acid sequences")
+    carbohydrate_sequence: List[str] = Field(default_factory=list, description="Category T088 (Carbohydrate Sequence): Entities describing carbohydrate sequences")
+    functional_concept: List[str] = Field(default_factory=list, description="Category T169 (Functional Concept): Entities describing functional concepts")
+    body_system: List[str] = Field(default_factory=list, description="Category T022 (Body System): Entities describing body systems")
+    
+    # Occupation, Discipline, Organization & Groups
+    occupation_or_discipline: List[str] = Field(default_factory=list, description="Category T090 (Occupation or Discipline): Entities describing occupations or disciplines")
+    biomedical_occupation_or_discipline: List[str] = Field(default_factory=list, description="Category T091 (Biomedical Occupation or Discipline): Entities describing biomedical occupations or disciplines")
+    organization: List[str] = Field(default_factory=list, description="Category T092 (Organization): Entities describing organizations")
+    health_care_related_organization: List[str] = Field(default_factory=list, description="Category T093 (Health Care Related Organization): Entities describing healthcare-related organizations")
+    professional_society: List[str] = Field(default_factory=list, description="Category T094 (Professional Society): Entities describing professional societies")
+    self_help_or_relief_organization: List[str] = Field(default_factory=list, description="Category T095 (Self-help or Relief Organization): Entities describing self-help or relief organizations")
+    group: List[str] = Field(default_factory=list, description="Category T096 (Group): Entities describing groups")
+    professional_or_occupational_group: List[str] = Field(default_factory=list, description="Category T097 (Professional or Occupational Group): Entities describing professional or occupational groups")
+    population_group: List[str] = Field(default_factory=list, description="Category T098 (Population Group): Entities describing population groups")
+    family_group: List[str] = Field(default_factory=list, description="Category T099 (Family Group): Entities describing family groups")
+    age_group: List[str] = Field(default_factory=list, description="Category T100 (Age Group): Entities describing age groups")
+    patient_or_disabled_group: List[str] = Field(default_factory=list, description="Category T101 (Patient or Disabled Group): Entities describing patient or disabled groups")
+    group_attribute: List[str] = Field(default_factory=list, description="Category T102 (Group Attribute): Entities describing group attributes")
+    
+    # Intellectual Product
+    intellectual_product: List[str] = Field(default_factory=list, description="Category T170 (Intellectual Product): Entities describing intellectual products")
+    regulation_or_law: List[str] = Field(default_factory=list, description="Category T089 (Regulation or Law): Entities describing regulations or laws")
+    classification: List[str] = Field(default_factory=list, description="Category T185 (Classification): Entities describing classification systems")
+    language: List[str] = Field(default_factory=list, description="Category T171 (Language): Entities describing languages")
 
 
-class Group4ConceptsOutput(BaseModel):
-    """Output schema for Group 4: Concepts & Ideas."""
-    T031: List[ExtractedEntity] = Field(default_factory=list, description="Body Substance")
-    T071: List[ExtractedEntity] = Field(default_factory=list, description="Entity")
-    T077: List[ExtractedEntity] = Field(default_factory=list, description="Conceptual Entity")
-    T078: List[ExtractedEntity] = Field(default_factory=list, description="Idea or Concept")
-    T079: List[ExtractedEntity] = Field(default_factory=list, description="Temporal Concept")
-    T080: List[ExtractedEntity] = Field(default_factory=list, description="Qualitative Concept")
-    T081: List[ExtractedEntity] = Field(default_factory=list, description="Quantitative Concept")
-    T082: List[ExtractedEntity] = Field(default_factory=list, description="Spatial Concept")
-    T089: List[ExtractedEntity] = Field(default_factory=list, description="Regulation or Law")
-    T102: List[ExtractedEntity] = Field(default_factory=list, description="Group Attribute")
-    T168: List[ExtractedEntity] = Field(default_factory=list, description="Food")
-    T169: List[ExtractedEntity] = Field(default_factory=list, description="Functional Concept")
-    T170: List[ExtractedEntity] = Field(default_factory=list, description="Intellectual Product")
-    T171: List[ExtractedEntity] = Field(default_factory=list, description="Language")
-    T185: List[ExtractedEntity] = Field(default_factory=list, description="Classification")
-    T201: List[ExtractedEntity] = Field(default_factory=list, description="Clinical Attribute")
+class ValidatedEntity(BaseModel):
+    """A validated entity after filtering."""
+    name: str = Field(..., description="Entity name")
+    semantic_type: str = Field(..., description="Semantic type field name")
+    cluster: str = Field(..., description="Cluster name (activity, phenomenon, physical_object, conceptual_entity)")
 
 
-class Group5DevicesOutput(BaseModel):
-    """Output schema for Group 5: Devices."""
-    T074: List[ExtractedEntity] = Field(default_factory=list, description="Medical Device")
-    T075: List[ExtractedEntity] = Field(default_factory=list, description="Research Device")
-    T203: List[ExtractedEntity] = Field(default_factory=list, description="Drug Delivery Device")
-
-
-class Group6DisordersOutput(BaseModel):
-    """Output schema for Group 6: Disorders."""
-    T019: List[ExtractedEntity] = Field(default_factory=list, description="Congenital Abnormality")
-    T020: List[ExtractedEntity] = Field(default_factory=list, description="Acquired Abnormality")
-    T033: List[ExtractedEntity] = Field(default_factory=list, description="Finding")
-    T034: List[ExtractedEntity] = Field(default_factory=list, description="Laboratory or Test Result")
-    T037: List[ExtractedEntity] = Field(default_factory=list, description="Injury or Poisoning")
-    T047: List[ExtractedEntity] = Field(default_factory=list, description="Disease or Syndrome")
-    T048: List[ExtractedEntity] = Field(default_factory=list, description="Mental or Behavioral Dysfunction")
-    T050: List[ExtractedEntity] = Field(default_factory=list, description="Experimental Model of Disease")
-    T184: List[ExtractedEntity] = Field(default_factory=list, description="Sign or Symptom")
-    T190: List[ExtractedEntity] = Field(default_factory=list, description="Anatomical Abnormality")
-    T191: List[ExtractedEntity] = Field(default_factory=list, description="Neoplastic Process")
-
-
-class Group7GenesOutput(BaseModel):
-    """Output schema for Group 7: Genes & Molecular Sequences."""
-    T028: List[ExtractedEntity] = Field(default_factory=list, description="Gene or Genome")
-    T085: List[ExtractedEntity] = Field(default_factory=list, description="Molecular Sequence")
-    T086: List[ExtractedEntity] = Field(default_factory=list, description="Nucleotide Sequence")
-    T087: List[ExtractedEntity] = Field(default_factory=list, description="Amino Acid Sequence")
-    T088: List[ExtractedEntity] = Field(default_factory=list, description="Carbohydrate Sequence")
-
-
-class Group8GeographyOutput(BaseModel):
-    """Output schema for Group 8: Geographic Areas."""
-    T083: List[ExtractedEntity] = Field(default_factory=list, description="Geographic Area")
-
-
-class Group9LivingBeingsOutput(BaseModel):
-    """Output schema for Group 9: Living Beings."""
-    T001: List[ExtractedEntity] = Field(default_factory=list, description="Organism")
-    T002: List[ExtractedEntity] = Field(default_factory=list, description="Plant")
-    T004: List[ExtractedEntity] = Field(default_factory=list, description="Fungus")
-    T005: List[ExtractedEntity] = Field(default_factory=list, description="Virus")
-    T007: List[ExtractedEntity] = Field(default_factory=list, description="Bacterium")
-    T008: List[ExtractedEntity] = Field(default_factory=list, description="Animal")
-    T010: List[ExtractedEntity] = Field(default_factory=list, description="Vertebrate")
-    T011: List[ExtractedEntity] = Field(default_factory=list, description="Amphibian")
-    T012: List[ExtractedEntity] = Field(default_factory=list, description="Bird")
-    T013: List[ExtractedEntity] = Field(default_factory=list, description="Fish")
-    T014: List[ExtractedEntity] = Field(default_factory=list, description="Reptile")
-    T015: List[ExtractedEntity] = Field(default_factory=list, description="Mammal")
-    T016: List[ExtractedEntity] = Field(default_factory=list, description="Human")
-    T194: List[ExtractedEntity] = Field(default_factory=list, description="Archaeon")
-    T204: List[ExtractedEntity] = Field(default_factory=list, description="Eukaryote")
-
-
-class Group10ObjectsOutput(BaseModel):
-    """Output schema for Group 10: Objects."""
-    T072: List[ExtractedEntity] = Field(default_factory=list, description="Physical Object")
-    T073: List[ExtractedEntity] = Field(default_factory=list, description="Manufactured Object")
-
-
-class Group11OccupationsOutput(BaseModel):
-    """Output schema for Group 11: Occupations."""
-    T090: List[ExtractedEntity] = Field(default_factory=list, description="Occupation or Discipline")
-    T091: List[ExtractedEntity] = Field(default_factory=list, description="Biomedical Occupation or Discipline")
-    T097: List[ExtractedEntity] = Field(default_factory=list, description="Professional or Occupational Group")
-
-
-class Group12OrganizationsOutput(BaseModel):
-    """Output schema for Group 12: Organizations."""
-    T032: List[ExtractedEntity] = Field(default_factory=list, description="Organism Attribute")
-    T092: List[ExtractedEntity] = Field(default_factory=list, description="Organization")
-    T093: List[ExtractedEntity] = Field(default_factory=list, description="Health Care Related Organization")
-    T094: List[ExtractedEntity] = Field(default_factory=list, description="Professional Society")
-    T095: List[ExtractedEntity] = Field(default_factory=list, description="Self-help or Relief Organization")
-    T096: List[ExtractedEntity] = Field(default_factory=list, description="Group")
-    T098: List[ExtractedEntity] = Field(default_factory=list, description="Population Group")
-    T099: List[ExtractedEntity] = Field(default_factory=list, description="Family Group")
-    T100: List[ExtractedEntity] = Field(default_factory=list, description="Age Group")
-    T101: List[ExtractedEntity] = Field(default_factory=list, description="Patient or Disabled Group")
-
-
-class Group13PhenomenaOutput(BaseModel):
-    """Output schema for Group 13: Phenomena."""
-    T051: List[ExtractedEntity] = Field(default_factory=list, description="Event")
-    T067: List[ExtractedEntity] = Field(default_factory=list, description="Phenomenon or Process")
-    T068: List[ExtractedEntity] = Field(default_factory=list, description="Human-caused Phenomenon or Process")
-    T069: List[ExtractedEntity] = Field(default_factory=list, description="Environmental Effect of Humans")
-    T070: List[ExtractedEntity] = Field(default_factory=list, description="Natural Phenomenon or Process")
-
-
-class Group14PhysiologyOutput(BaseModel):
-    """Output schema for Group 14: Physiology."""
-    T038: List[ExtractedEntity] = Field(default_factory=list, description="Biologic Function")
-    T039: List[ExtractedEntity] = Field(default_factory=list, description="Physiologic Function")
-    T040: List[ExtractedEntity] = Field(default_factory=list, description="Organism Function")
-    T041: List[ExtractedEntity] = Field(default_factory=list, description="Mental Process")
-    T042: List[ExtractedEntity] = Field(default_factory=list, description="Organ or Tissue Function")
-    T043: List[ExtractedEntity] = Field(default_factory=list, description="Cell Function")
-    T044: List[ExtractedEntity] = Field(default_factory=list, description="Molecular Function")
-    T045: List[ExtractedEntity] = Field(default_factory=list, description="Genetic Function")
-    T046: List[ExtractedEntity] = Field(default_factory=list, description="Pathologic Function")
-    T049: List[ExtractedEntity] = Field(default_factory=list, description="Cell or Molecular Dysfunction")
-
-
-class Group15ProceduresOutput(BaseModel):
-    """Output schema for Group 15: Procedures."""
-    T059: List[ExtractedEntity] = Field(default_factory=list, description="Laboratory Procedure")
-    T060: List[ExtractedEntity] = Field(default_factory=list, description="Diagnostic Procedure")
-    T061: List[ExtractedEntity] = Field(default_factory=list, description="Therapeutic or Preventive Procedure")
-    T063: List[ExtractedEntity] = Field(default_factory=list, description="Molecular Biology Research Technique")
+class FilterOutput(BaseModel):
+    """Schema for filter/validation output."""
+    entities: List[ValidatedEntity] = Field(default_factory=list, description="List of validated entities")
 
 
 __all__ = [
     'ExtractedEntity',
-    'TUI_TO_SEMTYPE',
-    'Group1ActivitiesOutput',
-    'Group2AnatomyOutput',
-    'Group3ChemicalsOutput',
-    'Group4ConceptsOutput',
-    'Group5DevicesOutput',
-    'Group6DisordersOutput',
-    'Group7GenesOutput',
-    'Group8GeographyOutput',
-    'Group9LivingBeingsOutput',
-    'Group10ObjectsOutput',
-    'Group11OccupationsOutput',
-    'Group12OrganizationsOutput',
-    'Group13PhenomenaOutput',
-    'Group14PhysiologyOutput',
-    'Group15ProceduresOutput',
+    'ActivityOutput',
+    'PhenomenonOutput',
+    'PhysicalObjectOutput',
+    'ConceptualEntityOutput',
+    'ValidatedEntity',
+    'FilterOutput'
 ]
