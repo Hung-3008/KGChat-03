@@ -81,3 +81,4 @@ celerybeat-schedule
 .python-version
 data/*
 output/*
+scripts/*
