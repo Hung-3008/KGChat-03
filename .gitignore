@@ -83,3 +83,4 @@ data/*
 output/*
 scripts/*
 *.ipynb
+commands.ipynb
