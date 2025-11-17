@@ -515,6 +515,7 @@ class ConceptualEntity(BaseModel):
 class Entity(BaseModel):
     name: str 
     semantic_type: str
+    mention: str
 
 class ValidatedEntity(BaseModel):
     entities: List[Entity]

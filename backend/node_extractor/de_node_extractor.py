@@ -18,6 +18,10 @@ class NodeExtractor:
         self.embedding_model = embedding_model
         self.encoder = encoder or TransformerEncoder(model_name=embedding_model, device=device)
         self.hierarchy_tree = build_hierarchy_tree(CLUSTER_DEFINITIONS)
+    
+
+    def get_mentioned_text(self, text: str, entities: List[Entity]) -> List[str]:
+        pass
 
     def clean_empty_entities(self, entities: Dict) -> Dict:
         cleaned = {}

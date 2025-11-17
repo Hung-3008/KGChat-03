@@ -242,6 +242,7 @@ For each entity that shares the same hierarchical depth with other entities, eva
 - Preserve the exact text of entities as they appear in the input
 - If an ENTIRE semantic type has no valid entities, omit it completely (don't include empty arrays)
 - In removal_explanations, document each removed entity with a concise reason (max 15 words)
+- Extract the mention text for each entity from the original clinical text
 
 ## CLINICAL TEXT
 [CLINICAL_INPUT_TEXT]
