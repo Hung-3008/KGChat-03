@@ -1,7 +1,7 @@
 from typing import List, Dict, Optional
 from backend.encoders.transformer_encoder import TransformerEncoder
-from backend.node_extractor.schema import ExtractionOutput
-from backend.node_extractor.prompts import PROMPT_TEMPLATE
+from backend.graph_extractor.schema import ExtractionOutput
+from backend.graph_extractor.prompts import PROMPT_TEMPLATE
 
 
 class NodeExtractor:

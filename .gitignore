@@ -84,3 +84,4 @@ output/*
 scripts/*
 *.ipynb
 commands.ipynb
+.github/*

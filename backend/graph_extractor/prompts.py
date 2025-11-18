@@ -260,3 +260,33 @@ Return ONLY a valid JSON objec
 - DO NOT invent new entities or modify existing entity text
 - DO NOT include any text outside the required JSON structure
 """
+
+EDGE_EXTRACTION_PROMPT = """"
+You are a medical knowledge extraction specialist. Analyze the clinical text below and extract **ONLY** explicit relationships between the provided entities. Follow these rules:
+
+1. **STRICT ENTITY MATCHING**: Only use entity names EXACTLY as provided in the node list. Never modify names or introduce new entities.
+2. **EXPLICIT RELATIONSHIPS ONLY**: Extract relationships DIRECTLY stated in the text. Never infer implicit connections (e.g., drug-disease treatment links without explicit text evidence).
+3. **RELATION PHRASING**: Use 1-3 word relation phrases that mirror the text's verbs/prepositions (e.g., "showed", "revealed", "diagnosed with").
+4. **ONE RELATION PER EDGE**: Each edge must represent a single textual relationship between one source and one target entity.
+5. **NO CONFIDENCE SCORES**: Omit the 'confidence' field entirely as it's optional per schema.
+
+**Clinical Text**:
+[INPUT TEXT]
+
+**Provided Entities** (use EXACT names):
+[ENTITIES LIST]
+
+**Output Requirements**:
+- Return ONLY valid JSON matching this schema: {"edges": [{"source": "entity1", "target": "entity2", "relation": "phrase"}]}
+- Include ONLY edges with explicit textual support
+- Omit all other text, explanations, or fields
+
+**Examples of VALID edges from this text**:
+- MRI → lesion in the left temporal lobe (relation: "showed")
+- physical examination → mild edema in the lower extremities (relation: "showed")
+
+**Examples of INVALID edges** (DO NOT INCLUDE):
+- metformin → type 2 diabetes mellitus (no explicit treatment link stated)
+- C-reactive protein → hemoglobin A1c (no direct relationship described)
+- Escherichia coli infection → urine culture (urine culture not in entity list)
+"""

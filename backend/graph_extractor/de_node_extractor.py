@@ -1,13 +1,13 @@
 import json
 from typing import List, Dict, Optional
 from backend.encoders.transformer_encoder import TransformerEncoder
-from backend.node_extractor.schema import (
+from backend.graph_extractor.schema import (
     Activity, Phenomenon, PhysicalObject, ConceptualEntity, Entity, ValidatedEntity
 )
-from backend.node_extractor.prompts import (
+from backend.graph_extractor.prompts import (
     ACTIVITY_PROMPT, PHENOMENON_PROMPT, PHYSICAL_OBJECT_PROMPT, CONCEPTUAL_ENTITY_PROMPT, CONTEXT_ENTITY_FILTER_PROMPT
 )
-from backend.node_extractor.umls_hierarchy import (
+from backend.graph_extractor.umls_hierarchy import (
     CLUSTER_DEFINITIONS, build_hierarchy_tree, filter_entities_by_hierarchy
 )
 

@@ -520,6 +520,16 @@ class Entity(BaseModel):
 class ValidatedEntity(BaseModel):
     entities: List[Entity]
 
+
+class Edge(BaseModel):
+    source: str
+    target: str
+    relation: str
+    confidence: Optional[float] = None
+
+class ExtractedEdges(BaseModel):
+    edges: List[Edge]
+
 __all__ = [
 
 ]
