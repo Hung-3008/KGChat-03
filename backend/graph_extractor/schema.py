@@ -525,7 +525,7 @@ class Edge(BaseModel):
     source: str
     target: str
     relation: str
-    confidence: Optional[float] = None
+    evidence: str
 
 class ExtractedEdges(BaseModel):
     edges: List[Edge]

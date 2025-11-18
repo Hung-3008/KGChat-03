@@ -261,32 +261,73 @@ Return ONLY a valid JSON objec
 - DO NOT include any text outside the required JSON structure
 """
 
-EDGE_EXTRACTION_PROMPT = """"
-You are a medical knowledge extraction specialist. Analyze the clinical text below and extract **ONLY** explicit relationships between the provided entities. Follow these rules:
+EDGE_EXTRACTION_PROMPT = """
+You are a medical expert. Extract relationships from the text using the entities and UMLS hints below.
 
-1. **STRICT ENTITY MATCHING**: Only use entity names EXACTLY as provided in the node list. Never modify names or introduce new entities.
-2. **EXPLICIT RELATIONSHIPS ONLY**: Extract relationships DIRECTLY stated in the text. Never infer implicit connections (e.g., drug-disease treatment links without explicit text evidence).
-3. **RELATION PHRASING**: Use 1-3 word relation phrases that mirror the text's verbs/prepositions (e.g., "showed", "revealed", "diagnosed with").
-4. **ONE RELATION PER EDGE**: Each edge must represent a single textual relationship between one source and one target entity.
-5. **NO CONFIDENCE SCORES**: Omit the 'confidence' field entirely as it's optional per schema.
+Rules:
+- Only use information within the provided clinical text and UMLS hints.
+- The relationship type must be one of: [treats, causes, associated_with, side_effect_of, diagnosed_by].
+- Only create relationships between entities that appear in the provided entity list.
+- UMLS nodes and edges are hints; do not invent relations not supported by the text.
 
-**Clinical Text**:
+For each relationship, return a JSON object with:
+- subject: exact entity name from the entity list
+- predicate: one of the allowed relationship types
+- object: exact entity name from the entity list
+- evidence: exact sentence from the text that supports the relationship
+
+If there is no clear relationship, return an empty JSON array.
+
+Clinical text:
 [INPUT TEXT]
 
-**Provided Entities** (use EXACT names):
+Provided entities (exact names):
 [ENTITIES LIST]
 
-**Output Requirements**:
-- Return ONLY valid JSON matching this schema: {"edges": [{"source": "entity1", "target": "entity2", "relation": "phrase"}]}
-- Include ONLY edges with explicit textual support
-- Omit all other text, explanations, or fields
+UMLS nodes (entity to candidate CUIs and semantic types):
+[UMLS NODES]
 
-**Examples of VALID edges from this text**:
-- MRI → lesion in the left temporal lobe (relation: "showed")
-- physical examination → mild edema in the lower extremities (relation: "showed")
+UMLS edges (relation patterns between candidate CUIs of entity pairs):
+[UMLS EDGES]
 
-**Examples of INVALID edges** (DO NOT INCLUDE):
-- metformin → type 2 diabetes mellitus (no explicit treatment link stated)
-- C-reactive protein → hemoglobin A1c (no direct relationship described)
-- Escherichia coli infection → urine culture (urine culture not in entity list)
+Return only a JSON array of relationship objects.
 """
+
+EDGE_VALIDATION_PROMPT = """
+Here is the English translation of the prompt:
+
+"You are a clinical medical expert with 15 years of experience, and also an auditor for a medical knowledge graph system. Your task is to VERIFY THE ACCURACY of the proposed relationships extracted from a medical text, based on 3 strict criteria:
+1. DIRECT EVIDENCE (Must be an exact citation from the text)
+2. CLINICAL PLAUSIBILITY (Consistent with treatment guidelines & pathogenesis)
+3. CONSISTENCY (Must not contradict other information in the text)
+
+### INPUT TO PROCESS
+Medical Text:
+[INPUT TEXT]
+
+LIST OF VALID ENTITIES (Only use entities in this list):
+[ENTITY_LIST]
+
+PROPOSED RELATIONSHIPS to verify:
+[PROPOSED_RELATIONSHIPS]
+
+### MANDATORY VERIFICATION RULES
+1. HALLUCINATION BLOCKER:
+   - IMMEDIATELY REJECT if:
+      - An Entity does not exist in the LIST OF VALID ENTITIES
+      - The Relation is not in the allowed list:
+        [diagnoses, detects, observes, treats, side_effect_of, associated_with, contraindicated_with, administered_for, caused_by]
+      - The Evidence consists of >1 sentence or does not contain BOTH entities in the same sentence.
+   - ONLY ACCEPT if there is an EXACT, WORD-FOR-WORD CITATION containing both entities and the stated relationship.
+
+2. CLINICAL CHECK:
+   - Use domain expertise to detect:
+      - Drug not indicated for the disease (e.g., Lisinopril does not treat diabetes)
+      - Illogical causal relationships (e.g., E. coli infection does not cause elevated HbA1c)
+      - Incorrect diagnostic attribution (e.g., "family history of X" != "patient has X")
+
+3. HANDLING AMBIGUITY:
+   - If the evidence is unclear -> REJECT instead of inferring.
+   - If the relation is close but imprecise -> PROPOSE A CORRECTION (e.g., Replace "causes" with "associated_with_elevated_levels").
+"""
+

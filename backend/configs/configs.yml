@@ -1,13 +1,11 @@
 LLM:
   client: ollama
   model: llama3.1:8b
-  # Sampling / generation options to improve determinism
   temperature: 0.0
   top_p: 1.0
-  # Optional: set a seed if your local Ollama build supports it (improves reproducibility)
   seed: 42
 
 
 Encoder:
-  model_name: intfloat/multilingual-e5-base
+  model_name: dmis-lab/biobert-v1.1
   device: cuda
