@@ -10,6 +10,11 @@ Encoder:
   model_name: dmis-lab/biobert-v1.1
   device: cuda
 
-Batch_size: 1
-Limit: 2
-Resume: False
+Create:
+  Batch_size: 10
+  Limit: 100
+  Resume: False 
+
+Insert:
+  Batch_size: 1000
+  Resume: False

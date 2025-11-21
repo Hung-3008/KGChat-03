@@ -31,9 +31,10 @@ def main():
     config_path = args.config
     configs = load_config(config_path)
     
-    batch_size = configs.get("Batch_size", 10)
-    limit = configs.get("Limit")
-    resume = configs.get("Resume", False)
+    create_config = configs.get("Create", {})
+    batch_size = create_config.get("Batch_size", 10)
+    limit = create_config.get("Limit")
+    resume = create_config.get("Resume", False)
     
     data_dir = Path("data/500_samples_pmc")
     if not data_dir.exists():

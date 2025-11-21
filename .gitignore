@@ -85,3 +85,4 @@ scripts/*
 *.ipynb
 commands.ipynb
 .github/*
+qdrant_storage/*
