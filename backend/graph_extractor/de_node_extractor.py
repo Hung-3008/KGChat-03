@@ -10,14 +10,18 @@ from backend.graph_extractor.prompts import (
 from backend.graph_extractor.umls_hierarchy import (
     CLUSTER_DEFINITIONS, build_hierarchy_tree, filter_entities_by_hierarchy
 )
+from backend.utils.time_logger import TimeLogger, Timer, setup_logger
+
+logger = setup_logger("node_extractor")
 
 class NodeExtractor:
-    def __init__(self, llm_client, model_name: str, embedding_model: str, encoder: Optional[TransformerEncoder] = None, device: str = "cpu"):
+    def __init__(self, llm_client, model_name: str, embedding_model: str, encoder: Optional[TransformerEncoder] = None, device: str = "cpu", time_logger: Optional[TimeLogger] = None):
         self.llm_client = llm_client
         self.model_name = model_name
         self.embedding_model = embedding_model
         self.encoder = encoder or TransformerEncoder(model_name=embedding_model, device=device)
         self.hierarchy_tree = build_hierarchy_tree(CLUSTER_DEFINITIONS)
+        self.time_logger = time_logger
     
 
     def get_mentioned_text(self, text: str, entities: List[Entity]) -> List[str]:
@@ -55,7 +59,7 @@ class NodeExtractor:
         except Exception:
             return {}
 
-    def extract (self, text: str) -> List[Dict]:
+    def extract (self, text: str, file_name: str = "unknown") -> List[Dict]:
         """
         Stage 1: Extract raw medical entities from text using LLM, do per-cluster
         Stage 2: Hierarchically filter 
@@ -64,10 +68,17 @@ class NodeExtractor:
         """
 
         # Stage 1: Extract raw entities
-        activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
-        phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
-        physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
-        conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
+        if self.time_logger:
+            with Timer(self.time_logger, file_name, "Node Stage 1: Raw Extraction"):
+                activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
+                phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
+                physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
+                conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
+        else:
+            activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
+            phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
+            physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
+            conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
 
 
         all_entities = {
@@ -77,44 +88,79 @@ class NodeExtractor:
             "conceptual_entity": conceptual_entity_entities,
         }
 
-        print("Extracted Entities:", all_entities)
+        #logger.info(f"Extracted Entities: {all_entities}")
 
         # Stage 2: Hierarchical filtering - filter entities by UMLS hierarchy depth
-        filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
-        print("Filtered Entities:", filtered_entities)
+        if self.time_logger:
+            with Timer(self.time_logger, file_name, "Node Stage 2: Hierarchy Filter"):
+                filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
+        else:
+            filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
+            
+        #logger.info(f"Filtered Entities: {filtered_entities}")
         
         # Stage 3: LLM filtering
-        llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
-        print("LLM Filtered Entities:", llm_filtered_entities)
+        if self.time_logger:
+            with Timer(self.time_logger, file_name, "Node Stage 3: LLM Filter"):
+                llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
+        else:
+            llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
+            
+        #logger.info(f"LLM Filtered Entities: {llm_filtered_entities}")
        
         # Stage 4: Embedding
-        entities_list = llm_filtered_entities.get("entities", []) if isinstance(llm_filtered_entities, dict) else []
-        
-        if not entities_list:
-            return []
-        
-        # Extract entity names
-        names = []
-        semantic_types = []
-        for e in entities_list:
-            if isinstance(e, dict):
-                name = e.get("name", "").strip()
-                semantic_type = e.get("semantic_type", "").strip()
-            else:
-                name = getattr(e, "name", "").strip()
-                semantic_type = getattr(e, "semantic_type", "").strip()
-            if name:
-                names.append(name)
-                semantic_types.append(semantic_type)
-        
-        if not names:
-            return []
-        
-        # Generate embeddings for entity names
-        try:
-            name_embeddings = self.encoder.embed_to_numpy(names).tolist()
-        except Exception:
-            return []
+        if self.time_logger:
+            with Timer(self.time_logger, file_name, "Node Stage 4: Embedding"):
+                entities_list = llm_filtered_entities.get("entities", []) if isinstance(llm_filtered_entities, dict) else []
+                
+                if not entities_list:
+                    return []
+                
+                # Extract entity names
+                names = []
+                semantic_types = []
+                for e in entities_list:
+                    if isinstance(e, dict):
+                        name = e.get("name", "").strip()
+                        semantic_type = e.get("semantic_type", "").strip()
+                    else:
+                        name = getattr(e, "name", "").strip()
+                        semantic_type = getattr(e, "semantic_type", "").strip()
+                    if name:
+                        names.append(name)
+                        semantic_types.append(semantic_type)
+                
+                if not names:
+                    return []
+                
+                # Generate embeddings for entity names
+                try:
+                    name_embeddings = self.encoder.embed_to_numpy(names).tolist()
+                except Exception:
+                    name_embeddings = []
+        else:
+            # Logic duplication avoided by better structure, but for now copy-paste with timer wrapper
+            entities_list = llm_filtered_entities.get("entities", []) if isinstance(llm_filtered_entities, dict) else []
+            if not entities_list:
+                return []
+            names = []
+            semantic_types = []
+            for e in entities_list:
+                if isinstance(e, dict):
+                    name = e.get("name", "").strip()
+                    semantic_type = e.get("semantic_type", "").strip()
+                else:
+                    name = getattr(e, "name", "").strip()
+                    semantic_type = getattr(e, "semantic_type", "").strip()
+                if name:
+                    names.append(name)
+                    semantic_types.append(semantic_type)
+            if not names:
+                return []
+            try:
+                name_embeddings = self.encoder.embed_to_numpy(names).tolist()
+            except Exception:
+                name_embeddings = []
         
         # Combine entities with their embeddings
         output = []

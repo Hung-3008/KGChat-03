@@ -3,14 +3,18 @@ from typing import List, Dict, Optional, Union, Tuple
 from backend.graph_extractor.schema import ExtractedEdges, ValidatedEntity, Entity, Edge
 from backend.graph_extractor.prompts import EDGE_EXTRACTION_PROMPT, EDGE_VALIDATION_PROMPT
 from backend.utils.umls_entity_lookup import build_umls_prompt_features 
+from backend.utils.time_logger import TimeLogger, Timer, setup_logger
+
+logger = setup_logger("edge_extractor")
 
 class EdgeExtractor:
-    def __init__(self, llm_client, model_name: str):
+    def __init__(self, llm_client, model_name: str, time_logger: Optional[TimeLogger] = None):
         self.llm_client = llm_client
         self.model_name = model_name
+        self.time_logger = time_logger
     
 
-    def extract(self, text: str, nodes: Union[List[Dict], ValidatedEntity]) -> ExtractedEdges:  
+    def extract(self, text: str, nodes: Union[List[Dict], ValidatedEntity], file_name: str = "unknown") -> ExtractedEdges:  
         """Extract relationships using entities and compact UMLS features."""
         if not text or not text.strip():
             return ExtractedEdges(edges=[])
@@ -31,12 +35,21 @@ class EdgeExtractor:
             return ExtractedEdges(edges=[])
 
         # Build compact UMLS features for the current entities
-        umls_features = build_umls_prompt_features(
-            entities_list,
-            db_path="data/umls.duckdb",
-            max_candidates_per_entity=1,
-            max_relations_per_pair=2,
-        )
+        if self.time_logger:
+            with Timer(self.time_logger, file_name, "Edge: UMLS Lookup"):
+                umls_features = build_umls_prompt_features(
+                    entities_list,
+                    db_path="data/umls.duckdb",
+                    max_candidates_per_entity=1,
+                    max_relations_per_pair=2,
+                )
+        else:
+            umls_features = build_umls_prompt_features(
+                entities_list,
+                db_path="data/umls.duckdb",
+                max_candidates_per_entity=1,
+                max_relations_per_pair=2,
+            )
 
         prompt = (
             EDGE_EXTRACTION_PROMPT
@@ -47,10 +60,10 @@ class EdgeExtractor:
         )
 
         #save prompt to check 
-        with open ("edge_extraction_prompt.txt", "w", encoding="utf-8") as f:
-            f.write(prompt) 
-
-        try:
+        # with open ("edge_extraction_prompt.txt", "w", encoding="utf-8") as f:
+        #     f.write(prompt) 
+        
+        def _generate_and_parse():
             resp = self.llm_client.generate(prompt=prompt, format=ExtractedEdges)
             
             # Helper to convert LLM response to Edge objects
@@ -102,8 +115,14 @@ class EdgeExtractor:
             edge_objs = [convert_to_edge(e) for e in edges_data]
             edge_objs = [e for e in edge_objs if e is not None]
             return ExtractedEdges(edges=edge_objs)
+
+        try:
+            if self.time_logger:
+                with Timer(self.time_logger, file_name, "Edge: LLM Generation"):
+                    return _generate_and_parse()
+            else:
+                return _generate_and_parse()
             
         except Exception as e:
-            print(f"Edge extraction error: {e}")
+            logger.error(f"Edge extraction error: {e}")
             return ExtractedEdges(edges=[])
-
