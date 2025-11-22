@@ -80,26 +80,9 @@ class Neo4jHelper:
         UNWIND $edges AS edge
         MATCH (s:Level1 {id: edge.source_id})
         MATCH (t:Level1 {id: edge.target_id})
-        MERGE (s)-[r:RELATION {type: edge.relation}]->(t)
-        """
-        # Note: Dynamic relationship types are tricky in Cypher. 
-        # For simplicity, we store relation type as a property 'type' on a generic 'RELATION' relationship,
-        # OR we can use APOC if available. 
-        # A better approach for pure Cypher without APOC for dynamic types is to use APOC or string formatting (risky).
-        # Given the requirement, let's use a generic relationship with a type property for now, 
-        # OR better: assume 'relation' is the relationship TYPE.
-        
-        # If 'relation' is the relationship TYPE (e.g. TREATS), we need APOC or string formatting.
-        # Let's try APOC approach if available, or fallback to string formatting safely if we trust the input.
-        # Since we can't guarantee APOC, and relation types might vary, let's use a fixed relationship type 'RELATED_TO' 
-        # and store the actual semantic relation as a property.
-        
-        query = """
-        UNWIND $edges AS edge
-        MATCH (s:Level1 {id: edge.source_id})
-        MATCH (t:Level1 {id: edge.target_id})
-        MERGE (s)-[r:RELATED_TO]->(t)
-        SET r.type = edge.relation
+        CALL apoc.merge.relationship(s, edge.relation, {}, {}, t, {})
+        YIELD rel
+        RETURN count(rel)
         """
         with self.driver.session() as session:
             session.run(query, edges=edges)

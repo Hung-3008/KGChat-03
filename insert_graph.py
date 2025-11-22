@@ -46,6 +46,7 @@ def main():
     configs = load_config(args.config)
     insert_config = configs.get("Insert", {})
     batch_size = insert_config.get("Batch_size", 1000)
+    limit = insert_config.get("Limit", None)
     resume = insert_config.get("Resume", False)
     
     output_dir = Path("output")
@@ -114,6 +115,10 @@ def main():
     # Convert to list for batching
     node_list = list(unique_nodes.values())
     
+    if limit:
+        logger.info(f"Limiting to {limit} nodes/edges for testing.")
+        node_list = node_list[:limit]
+    
     # Insert Nodes to Neo4j and Qdrant
     logger.info("Inserting nodes...")
     for i in tqdm(range(0, len(node_list), batch_size), desc="Nodes"):
@@ -148,13 +153,19 @@ def main():
             relation = e.get("relation", "").strip()
             
             if source in unique_nodes and target in unique_nodes and relation:
+                # Sanitize relation: UPPER_SNAKE_CASE
+                sanitized_relation = relation.strip().upper().replace(" ", "_")
                 valid_edges.append({
                     "source_id": unique_nodes[source]["id"],
                     "target_id": unique_nodes[target]["id"],
-                    "relation": relation
+                    "relation": sanitized_relation
                 })
         
         logger.info(f"Identified {len(valid_edges)} valid edges (both nodes exist).")
+        
+        if limit:
+             valid_edges = valid_edges[:limit]
+             logger.info(f"Limiting edges to {limit}...")
         
         # Insert Edges to Neo4j
         logger.info("Inserting edges...")

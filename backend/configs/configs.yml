@@ -5,7 +5,6 @@ LLM:
   top_p: 1.0
   seed: 42
 
-
 Encoder:
   model_name: dmis-lab/biobert-v1.1
   device: cuda
@@ -16,5 +15,6 @@ Create:
   Resume: False 
 
 Insert:
-  Batch_size: 1000
+  Batch_size: 10
+  Limit: 100
   Resume: False
