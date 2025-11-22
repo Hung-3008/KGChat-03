@@ -10,5 +10,9 @@ class LLMFactory:
             from .ollama_client import OllamaClient
 
             return OllamaClient(config)
+        elif client_name == "gemini":
+            from .gemini_client import GeminiClient
+            
+            return GeminiClient(config)
         else:
             raise ValueError(f"Unsupported LLM client: {client_name}")

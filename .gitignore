@@ -82,6 +82,7 @@ celerybeat-schedule
 data/*
 output/*
 scripts/*
+!scripts/test_gemini_client.py
 *.ipynb
 commands.ipynb
 .github/*
