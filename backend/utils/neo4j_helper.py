@@ -86,3 +86,11 @@ class Neo4jHelper:
         """
         with self.driver.session() as session:
             session.run(query, edges=edges)
+
+    def query(self, cypher_query: str, parameters: Dict = None) -> List[Dict]:
+        """
+        Executes a generic Cypher query and returns the results as a list of dictionaries.
+        """
+        with self.driver.session() as session:
+            result = session.run(cypher_query, parameters or {})
+            return [record.data() for record in result]

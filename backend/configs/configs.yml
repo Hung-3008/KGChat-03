@@ -5,6 +5,11 @@ LLM:
   top_p: 1.0
   seed: 42
 
+Gemini:
+  model: gemini-2.5-flash
+  temperature: 0.85
+  top_p: 0.9
+
 Encoder:
   model_name: dmis-lab/biobert-v1.1
   device: cuda
