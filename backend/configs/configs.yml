@@ -17,7 +17,7 @@ Encoder:
 Create:
   Batch_size: 10
   Limit: 100
-  Resume: False 
+  Resume: True 
 
 Insert:
   Batch_size: 10
