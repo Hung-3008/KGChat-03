@@ -1,7 +1,7 @@
 import os
 import yaml
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
 
 from backend.llm.ollama_client import OllamaClient
@@ -36,7 +36,11 @@ class RetrievalManager:
             device=self.config.get("Encoder", {}).get("device")
         )
         self.qdrant = QdrantHelper()
-        self.neo4j = Neo4jHelper()
+        try:
+            self.neo4j = Neo4jHelper()
+        except Exception as e:
+            logger.warning(f"Neo4j initialization failed: {e}. Graph retrieval will be disabled.")
+            self.neo4j = None
         
         logger.info("RetrievalManager initialized successfully.")
 
@@ -96,6 +100,10 @@ class RetrievalManager:
         WHERE n.id IN $node_ids
         RETURN n.name AS source, n.semantic_type AS source_type, type(r) AS relation, m.name AS target, m.semantic_type AS target_type
         """
+        if not self.neo4j:
+            logger.warning("Neo4j is not initialized. Returning empty graph data.")
+            return []
+
         try:
             results = self.neo4j.query(query, parameters={"node_ids": node_ids})
             logger.info(f"Retrieved {len(results)} relationships from Neo4j.")
@@ -180,6 +188,53 @@ class RetrievalManager:
         
         logger.info("Retrieval process completed.")
         return answer
+
+    def run_for_frontend(self, question: str, grounding: bool = True) -> Dict[str, Any]:
+        logger.info(f"Starting frontend retrieval process for question: '{question}'")
+        
+        steps_data = {
+            "question": question,
+            "keywords": [],
+            "qdrant_nodes": [],
+            "graph_data": [],
+            "google_grounding": "",
+            "final_answer": ""
+        }
+        
+        # 1. Extract Keywords
+        keywords = self.extract_keywords(question)
+        if not keywords:
+            logger.warning("No keywords extracted. Using question as keyword.")
+            keywords = [question]
+        steps_data["keywords"] = keywords
+            
+        text_to_embed = " ".join(keywords)
+        vector = self.get_embedding(text_to_embed)
+        
+        # 3. Vector Search
+        node_ids = []
+        if vector:
+            node_ids = self.search_qdrant(vector)
+        steps_data["qdrant_nodes"] = node_ids
+        
+        # 4. Get Neo4j Data
+        graph_data = self.get_neo4j_data(node_ids)
+        steps_data["graph_data"] = graph_data
+        graph_context = self.format_graph_context(graph_data)
+        
+        # 5. Google Grounding
+        if grounding:
+            google_context = self.get_google_grounding(question)
+            steps_data["google_grounding"] = google_context
+        else:
+            google_context = ""
+        
+        # 6. Generate Answer
+        answer = self.generate_answer(question, graph_context, google_context)
+        steps_data["final_answer"] = answer
+        
+        logger.info("Frontend retrieval process completed.")
+        return steps_data
 
 if __name__ == "__main__":
     try:
