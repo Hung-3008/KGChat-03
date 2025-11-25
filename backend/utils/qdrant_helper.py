@@ -57,7 +57,7 @@ class QdrantHelper:
             ]
         )
 
-    def search(self, collection_name: str, query_vector: List[float], limit: int = 5, score_threshold: float = 0.65) -> List[str]:
+    def search(self, collection_name: str, query_vector: List[float], limit: int = 5, score_threshold: float = 0.65) -> List[Dict]:
         """
         Search for similar vectors in the collection.
         Returns a list of point IDs that have a similarity score > score_threshold.
@@ -67,18 +67,21 @@ class QdrantHelper:
                 collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
-                with_payload=False # We only need IDs here
+                with_payload=True 
             )
             
-            # Filter by score and extract IDs
-            filtered_ids = [
-                str(point.id) 
-                for point in results 
-                if point.score > score_threshold
-            ]
+            # Filter by score and extract IDs and names
+            filtered_results = []
+            for point in results:
+                if point.score > score_threshold:
+                    payload = point.payload or {}
+                    filtered_results.append({
+                        "id": str(point.id),
+                        "name": payload.get("name", "Unknown")
+                    })
             
-            logger.info(f"Found {len(results)} results, {len(filtered_ids)} passed threshold {score_threshold}")
-            return filtered_ids
+            logger.info(f"Found {len(results)} results, {len(filtered_results)} passed threshold {score_threshold}")
+            return filtered_results
             
         except Exception as e:
             logger.error(f"Search failed: {e}")

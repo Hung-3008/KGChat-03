@@ -78,17 +78,17 @@ class RetrievalManager:
             logger.error(f"Embedding failed: {e}")
             return []
 
-    def search_qdrant(self, vector: List[float], collection_name: str = "kg_lv1_nodes", top_k: int = 5) -> List[str]:
+    def search_qdrant(self, vector: List[float], collection_name: str = "kg_lv1_nodes", top_k: int = 5) -> List[Dict]:
         logger.info(f"Searching Qdrant collection '{collection_name}'...")
         
-        node_ids = self.qdrant.search(
+        results = self.qdrant.search(
             collection_name=collection_name, 
             query_vector=vector, 
             limit=top_k,
             score_threshold=0.65
         )
-        logger.info(f"Found {len(node_ids)} nodes in Qdrant: {node_ids}")
-        return node_ids
+        logger.info(f"Found {len(results)} nodes in Qdrant: {results}")
+        return results
 
     def get_neo4j_data(self, node_ids: List[str]) -> List[Dict]:
         logger.info(f"Querying Neo4j for {len(node_ids)} nodes...")
@@ -189,7 +189,7 @@ class RetrievalManager:
         logger.info("Retrieval process completed.")
         return answer
 
-    def run_for_frontend(self, question: str, grounding: bool = True) -> Dict[str, Any]:
+    def run_for_frontend_stream(self, question: str, grounding: bool = True):
         logger.info(f"Starting frontend retrieval process for question: '{question}'")
         
         steps_data = {
@@ -200,6 +200,7 @@ class RetrievalManager:
             "google_grounding": "",
             "final_answer": ""
         }
+        yield steps_data
         
         # 1. Extract Keywords
         keywords = self.extract_keywords(question)
@@ -207,34 +208,43 @@ class RetrievalManager:
             logger.warning("No keywords extracted. Using question as keyword.")
             keywords = [question]
         steps_data["keywords"] = keywords
+        yield steps_data
             
         text_to_embed = " ".join(keywords)
         vector = self.get_embedding(text_to_embed)
         
         # 3. Vector Search
-        node_ids = []
+        qdrant_results = []
         if vector:
-            node_ids = self.search_qdrant(vector)
-        steps_data["qdrant_nodes"] = node_ids
+            qdrant_results = self.search_qdrant(vector)
+        
+        # Store names for display, but keep IDs for next step
+        steps_data["qdrant_nodes"] = [item["name"] for item in qdrant_results]
+        yield steps_data
+        
+        node_ids = [item["id"] for item in qdrant_results]
         
         # 4. Get Neo4j Data
         graph_data = self.get_neo4j_data(node_ids)
         steps_data["graph_data"] = graph_data
+        yield steps_data
+        
         graph_context = self.format_graph_context(graph_data)
         
         # 5. Google Grounding
         if grounding:
             google_context = self.get_google_grounding(question)
             steps_data["google_grounding"] = google_context
+            yield steps_data
         else:
             google_context = ""
         
         # 6. Generate Answer
         answer = self.generate_answer(question, graph_context, google_context)
         steps_data["final_answer"] = answer
+        yield steps_data
         
         logger.info("Frontend retrieval process completed.")
-        return steps_data
 
 if __name__ == "__main__":
     try:
