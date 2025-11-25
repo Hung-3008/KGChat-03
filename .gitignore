@@ -88,3 +88,6 @@ commands.ipynb
 .github/*
 qdrant_storage/*
 backend/krissbert_custom/umls_full.json
+backend/krissbert_custom/pytorch_model.bin
+outputs/*
+backend/krissbert_custom/prototypes/*
