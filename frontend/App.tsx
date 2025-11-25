@@ -57,12 +57,17 @@ const App: React.FC = () => {
     ]);
 
     try {
-      // Call backend service
-      const response = await sendMessageToBackend(text);
-      const responseTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      let finalAnswer = "";
 
-      // Update steps
-      setRetrievalSteps(response.steps);
+      // Call backend service with streaming callback
+      await sendMessageToBackend(text, (steps) => {
+        setRetrievalSteps(steps);
+        if (steps.final_answer) {
+          finalAnswer = steps.final_answer;
+        }
+      });
+
+      const responseTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       // Remove typing placeholder and add real response
       setMessages((prev) => {
@@ -71,7 +76,7 @@ const App: React.FC = () => {
           ...filtered,
           {
             id: Date.now().toString(),
-            text: response.answer,
+            text: finalAnswer || "I processed your request but couldn't generate a final answer.",
             sender: Sender.BOT,
             timestamp: responseTimestamp,
           },
