@@ -1,0 +1,8 @@
+model_name_or_path: /home/nguyenthang/krissbert_custom
+train_data:
+  _target_: utils_umls.PreprocessedUMLS
+  UMLS_path: /media/hung/data1/codes/projects/FHC/backend/krissbert_custom/umls_full.json
+batch_size: 256
+max_length: 64
+output_prototypes: prototypes/embeddings.pkl
+output_name_cuis: prototypes/name_cuis

@@ -87,3 +87,4 @@ scripts/*
 commands.ipynb
 .github/*
 qdrant_storage/*
+backend/krissbert_custom/umls_full.json
