@@ -343,6 +343,30 @@ class UMLSEntityLookup:
             # Silently handle errors
             return {}
 
+    def map_mesh_ids_to_cuis(self, mesh_ids: List[str]) -> Dict[str, str]:
+        """
+        Map MeSH IDs to UMLS CUIs.
+        Returns dict mapping MeSH ID -> CUI
+        """
+        if not mesh_ids:
+            return {}
+        
+        try:
+            # Use IN clause for batch query
+            placeholders = ','.join(['?' for _ in mesh_ids])
+            query = f"""
+                SELECT DISTINCT CODE, CUI
+                FROM mrconso 
+                WHERE CODE IN ({placeholders})
+                  AND SAB = 'MSH'
+            """
+            results = self.conn.execute(query, mesh_ids).fetchall()
+            return {code: cui for code, cui in results}
+        except Exception as e:
+            # Silently handle errors
+            return {}
+
+
 
 def find_umls_entities(search_text: str, db_path: str = "data/umls.duckdb", limit: int = 10) -> List[Dict]:
     """

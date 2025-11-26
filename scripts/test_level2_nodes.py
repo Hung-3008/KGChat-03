@@ -1,3 +1,4 @@
+
 import sys
 import os
 import json
@@ -8,8 +9,11 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger("test_level2_nodes")
+
 from backend.graph_extractor.edge_extractor import EdgeExtractor
-from backend.graph_extractor.schema import ValidatedEntity
 
 # Mock LLM Client
 class MockLLMClient:
@@ -17,33 +21,47 @@ class MockLLMClient:
         return json.dumps({"edges": []})
 
 def main():
-    logging.basicConfig(level=logging.INFO)
-    
-    print("Initializing EdgeExtractor...")
+    logger.info("Initializing EdgeExtractor...")
     llm_client = MockLLMClient()
-    extractor = EdgeExtractor(llm_client=llm_client, model_name="test-model")
     
-    if extractor.biosyn:
-        print("BioSyn initialized successfully.")
-    else:
-        print("BioSyn failed to initialize.")
+    try:
+        extractor = EdgeExtractor(llm_client=llm_client, model_name="test-model")
+    except Exception as e:
+        logger.error(f"Failed to initialize EdgeExtractor: {e}")
         return
 
-    text = "The patient has diabetes mellitus."
+    if not extractor.biosyn:
+        logger.error("BioSyn failed to initialize.")
+        return
+
+    # Test case
+    text = "The patient has diabetes mellitus and hypertension."
     nodes = [
-        {"name": "diabetes mellitus", "semantic_type": "Disease_or_Syndrome", "mention": "diabetes mellitus"}
+        {"name": "diabetes mellitus", "semantic_type": "Disease_or_Syndrome", "mention": "diabetes mellitus"},
+        {"name": "hypertension", "semantic_type": "Disease_or_Syndrome", "mention": "hypertension"}
     ]
     
-    print("Running extraction...")
+    logger.info("Running extraction...")
     edges_result, level2_nodes = extractor.extract(text, nodes, file_name="test_file")
     
-    print(f"Level 2 Nodes: {len(level2_nodes)}")
+    logger.info(f"Level 2 Nodes Created: {len(level2_nodes)}")
+    
+    missing_defs = 0
     for node in level2_nodes:
-        print(json.dumps(node, indent=2))
+        name = node['name']
+        cui = node.get('cui')
+        definition = node.get('definition')
         
-    print(f"Edges: {len(edges_result.edges)}")
-    for edge in edges_result.edges:
-        print(edge)
+        if definition:
+            logger.info(f"✓ {name} ({cui}): Found definition")
+        else:
+            logger.error(f"✗ {name} ({cui}): Missing definition")
+            missing_defs += 1
+            
+    if missing_defs == 0:
+        logger.info("SUCCESS: All Level 2 nodes have definitions.")
+    else:
+        logger.error(f"FAILURE: {missing_defs} nodes missing definitions.")
 
 if __name__ == "__main__":
     main()

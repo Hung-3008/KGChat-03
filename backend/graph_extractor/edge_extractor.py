@@ -228,25 +228,41 @@ class EdgeExtractor:
                 logger.warning(f"BioSyn processing failed for '{mention}': {e}")
         
         # Step 2: Batch query definitions and ICD codes
-        all_cuis = [pred.get("id") for _, preds in all_predictions for pred in preds]
+        def clean_id(mid):
+            if mid and "|" in mid:
+                return mid.split("|")[-1]
+            return mid
+
+        all_mesh_ids = [clean_id(pred.get("id")) for _, preds in all_predictions for pred in preds]
         
         icd_map = {}
         def_map = {}
+        mesh_to_cui_map = {}
         
-        if all_cuis:
+        if all_mesh_ids:
             with UMLSEntityLookup("data/umls.duckdb") as lookup:
-                icd_map = lookup.get_icd_codes_batch(all_cuis)
-                def_map = lookup.get_definitions_batch(all_cuis)
+                # Map MeSH IDs to CUIs
+                mesh_to_cui_map = lookup.map_mesh_ids_to_cuis(all_mesh_ids)
+                
+                # Get unique CUIs
+                all_cuis = list(set(mesh_to_cui_map.values()))
+                
+                if all_cuis:
+                    icd_map = lookup.get_icd_codes_batch(all_cuis)
+                    def_map = lookup.get_definitions_batch(all_cuis)
         
         # Step 3: Create Level 2 nodes and REF_TO edges using batch results
         for entity, predictions in all_predictions:
             for pred in predictions:
-                cui = pred.get("id")
+                mesh_id = clean_id(pred.get("id"))
                 name = pred.get("name")
                 
-                # Lookup from batch results
-                definition = def_map.get(cui, "")
-                icd = icd_map.get(cui, "")
+                # Get mapped CUI
+                cui = mesh_to_cui_map.get(mesh_id)
+                
+                # Lookup from batch results using CUI
+                definition = def_map.get(cui, "") if cui else ""
+                icd = icd_map.get(cui, "") if cui else ""
                 
                 # Create Level 2 Node
                 l2_node = {
@@ -254,7 +270,7 @@ class EdgeExtractor:
                     "semantic_type": "Level 2",
                     "definition": definition,
                     "icd": icd,
-                    "cui": cui,
+                    "cui": cui if cui else mesh_id, # Prefer UMLS CUI, fallback to MeSH ID
                     "level": "Level 2"
                 }
                 level2_nodes.append(l2_node)
