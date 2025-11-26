@@ -98,7 +98,7 @@ class UMLSEntityLookup:
             return entities
             
         except Exception as e:
-            print(f"Error during search: {e}")
+            # Silently handle errors
             return []
     
     def search_exact_match(
@@ -135,7 +135,7 @@ class UMLSEntityLookup:
             return entities
             
         except Exception as e:
-            print(f"Error during exact match search: {e}")
+            # Silently handle errors
             return []
     
     def _build_entity(self, cui: str, term: str, language: str) -> Optional[UMLSEntity]:
@@ -169,7 +169,7 @@ class UMLSEntityLookup:
                 related_terms=related_terms
             )
         except Exception as e:
-            print(f"Error building entity for {cui}: {e}")
+            # Silently handle errors
             return None
     
     def _get_semantic_types(self, cui: str) -> List[str]:
@@ -179,7 +179,7 @@ class UMLSEntityLookup:
             results = self.conn.execute(query, [cui]).fetchall()
             return [row[0] for row in results]
         except Exception as e:
-            print(f"Error fetching semantic types for {cui}: {e}")
+            # Silently handle errors
             return []
     
     def _get_definitions(self, cui: str, limit: int = 5) -> List[str]:
@@ -193,7 +193,7 @@ class UMLSEntityLookup:
             results = self.conn.execute(query, [cui, limit]).fetchall()
             return [row[0] for row in results]
         except Exception as e:
-            print(f"Error fetching definitions for {cui}: {e}")
+            # Silently handle errors
             return []
     
     def _get_related_terms(self, cui: str, limit: int = 10) -> List[Dict]:
@@ -224,7 +224,7 @@ class UMLSEntityLookup:
             
             return related
         except Exception as e:
-            print(f"Error fetching related terms for {cui}: {e}")
+            # Silently handle errors
             return []
     
     def get_all_terms_for_cui(self, cui: str, language: str = "ENG") -> List[str]:
@@ -248,7 +248,100 @@ class UMLSEntityLookup:
             return [row[0] for row in results]
         except Exception as e:
             print(f"Error fetching all terms for {cui}: {e}")
-            return []
+    def get_icd_code(self, cui: str) -> str:
+        """
+        Get ICD-10 code for a CUI
+        """
+        try:
+            # Prioritize ICD10, then ICD10CM
+            query = """
+                SELECT CODE 
+                FROM mrconso 
+                WHERE CUI = ? 
+                  AND SAB IN ('ICD10', 'ICD10CM')
+                ORDER BY CASE WHEN SAB = 'ICD10' THEN 1 ELSE 2 END
+                LIMIT 1
+            """
+            result = self.conn.execute(query, [cui]).fetchone()
+            return result[0] if result else ""
+        except Exception as e:
+            # Silently handle errors
+            return ""
+
+    def get_definition(self, cui: str) -> str:
+        """
+        Get English definition for a CUI.
+        Prioritizes MSH (MeSH) and NCI sources.
+        """
+        try:
+            # Prioritize MSH, NCI, then others
+            query = """
+                SELECT DEF 
+                FROM mrdef 
+                WHERE CUI = ?
+                ORDER BY CASE 
+                    WHEN SAB = 'MSH' THEN 1 
+                    WHEN SAB = 'NCI' THEN 2 
+                    ELSE 3 
+                END
+                LIMIT 1
+            """
+            result = self.conn.execute(query, [cui]).fetchone()
+            return result[0] if result else ""
+        except Exception as e:
+            # Silently handle errors
+            return ""
+
+    def get_icd_codes_batch(self, cuis: List[str]) -> Dict[str, str]:
+        """
+        Get ICD-10 codes for multiple CUIs in one query
+        Returns dict mapping CUI -> ICD code
+        """
+        if not cuis:
+            return {}
+        
+        try:
+            # Use IN clause for batch query
+            placeholders = ','.join(['?' for _ in cuis])
+            query = f"""
+                SELECT DISTINCT ON (CUI) CUI, CODE 
+                FROM mrconso 
+                WHERE CUI IN ({placeholders})
+                  AND SAB IN ('ICD10', 'ICD10CM')
+                ORDER BY CUI, CASE WHEN SAB = 'ICD10' THEN 1 ELSE 2 END
+            """
+            results = self.conn.execute(query, cuis).fetchall()
+            return {cui: code for cui, code in results}
+        except Exception as e:
+            # Silently handle errors
+            return {}
+
+    def get_definitions_batch(self, cuis: List[str]) -> Dict[str, str]:
+        """
+        Get definitions for multiple CUIs in one query
+        Returns dict mapping CUI -> definition
+        """
+        if not cuis:
+            return {}
+        
+        try:
+            # Use IN clause for batch query
+            placeholders = ','.join(['?' for _ in cuis])
+            query = f"""
+                SELECT DISTINCT ON (CUI) CUI, DEF
+                FROM mrdef 
+                WHERE CUI IN ({placeholders})
+                ORDER BY CUI, CASE 
+                    WHEN SAB = 'MSH' THEN 1 
+                    WHEN SAB = 'NCI' THEN 2 
+                    ELSE 3 
+                END
+            """
+            results = self.conn.execute(query, cuis).fetchall()
+            return {cui: defi for cui, defi in results}
+        except Exception as e:
+            # Silently handle errors
+            return {}
 
 
 def find_umls_entities(search_text: str, db_path: str = "data/umls.duckdb", limit: int = 10) -> List[Dict]:
@@ -296,13 +389,13 @@ def build_umls_prompt_features(
     try:
         from backend.utils.umls_entity_lookup import UMLSEntityLookup
     except ImportError:
-        print("Warning: Cannot import UMLSEntityLookup, returning empty UMLS features")
+        # Cannot import UMLSEntityLookup
         return {"nodes": [], "edges": []}
 
     try:
         import duckdb
     except ImportError:
-        print("Warning: duckdb is not available, returning empty UMLS features")
+        # duckdb is not available
         return {"nodes": [], "edges": []}
 
     # Step 1: choose compact candidates per entity

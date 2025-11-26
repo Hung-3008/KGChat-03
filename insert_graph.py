@@ -107,7 +107,11 @@ def main():
                 "id": node_id,
                 "name": name,
                 "semantic_type": n.get("semantic_type", ""),
-                "vector": embedding
+                "vector": embedding,
+                "icd": n.get("icd", ""),
+                "definition": n.get("definition", ""),
+                "cui": n.get("cui", ""),
+                "level": n.get("level", "Level 1")
             }
             
     logger.info(f"Identified {len(unique_nodes)} unique nodes.")
@@ -125,7 +129,15 @@ def main():
         batch = node_list[i : i + batch_size]
         
         # Neo4j Batch
-        neo4j_nodes = [{"id": n["id"], "name": n["name"], "semantic_type": n["semantic_type"]} for n in batch]
+        neo4j_nodes = [{
+            "id": n["id"], 
+            "name": n["name"], 
+            "semantic_type": n["semantic_type"],
+            "icd": n.get("icd", ""),
+            "definition": n.get("definition", ""),
+            "cui": n.get("cui", ""),
+            "level": n.get("level", "Level 1")
+        } for n in batch]
         neo4j.insert_nodes(neo4j_nodes)
         
         # Qdrant Batch
@@ -135,7 +147,14 @@ def main():
                 qdrant_points.append({
                     "id": n["id"],
                     "vector": n["vector"],
-                    "payload": {"name": n["name"], "semantic_type": n["semantic_type"]}
+                    "payload": {
+                        "name": n["name"], 
+                        "semantic_type": n["semantic_type"],
+                        "icd": n.get("icd", ""),
+                        "definition": n.get("definition", ""),
+                        "cui": n.get("cui", ""),
+                        "level": n.get("level", "Level 1")
+                    }
                 })
         if qdrant_points:
             qdrant.insert_points(collection_name, qdrant_points)

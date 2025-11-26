@@ -66,7 +66,7 @@ class GraphExtractor:
         if not input_file.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
             
-        logger.info(f"Processing file: {input_path}")
+        # logger.info(f"Processing file: {input_path}")
         
         # Step 1: Chunking
         if self.time_logger:
@@ -79,7 +79,6 @@ class GraphExtractor:
         all_edges = []
         
         # Step 2 & 3: Node and Edge Extraction per chunk
-        # Step 2 & 3: Node and Edge Extraction per chunk
         for i, chunk in enumerate(chunks):
             # Node Extraction
             if self.time_logger:
@@ -91,14 +90,22 @@ class GraphExtractor:
             for node in nodes:
                 node['chunk_id'] = i
                 node['source_file'] = input_file.name
+                node['level'] = "Level 1" # Mark as Level 1
             all_nodes.extend(nodes)
             
             # Edge Extraction
             if self.time_logger:
                 with Timer(self.time_logger, input_file.name, f"Edge Extraction (Chunk {i})"):
-                    edges_result = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+                    edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
             else:
-                edges_result = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+                edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+            
+            # Process Level 2 Nodes
+            for l2_node in level2_nodes:
+                l2_node['chunk_id'] = i
+                l2_node['source_file'] = input_file.name
+                # level is already set in EdgeExtractor
+            all_nodes.extend(level2_nodes)
                 
             if edges_result and edges_result.edges:
                 for edge in edges_result.edges:
@@ -165,7 +172,6 @@ class GraphExtractor:
         
         self.save_nodes(nodes, output_path / "nodes.csv")
         self.save_edges(edges, output_path / "edges.csv")
-        print(f"Extraction complete. Results saved to {output_dir}")
 
 if __name__ == "__main__":
     # Example usage

@@ -66,7 +66,14 @@ class Neo4jHelper:
         UNWIND $nodes AS node
         MERGE (n:Level1 {id: node.id})
         SET n.name = node.name,
-            n.semantic_type = node.semantic_type
+            n.semantic_type = node.semantic_type,
+            n.icd = node.icd,
+            n.definition = node.definition,
+            n.cui = node.cui,
+            n.level = node.level
+        WITH n, node
+        CALL apoc.do.when(node.level = 'Level 2', 'SET n:Level2', '', {n:n}) YIELD value
+        RETURN count(value)
         """
         with self.driver.session() as session:
             session.run(query, nodes=nodes)

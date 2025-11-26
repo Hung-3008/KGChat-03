@@ -20,18 +20,38 @@ class QdrantHelper:
 
     def create_collection(self, collection_name: str, vector_size: int = 768):
         """Creates collection if it doesn't exist."""
-        if not self.client.collection_exists(collection_name):
-            self.client.create_collection(
-                collection_name=collection_name,
-                vectors_config=models.VectorParams(size=vector_size, distance=models.Distance.COSINE),
-            )
-            logger.info(f"Created collection '{collection_name}'")
+        exists = False
+        try:
+            exists = self.client.collection_exists(collection_name)
+        except Exception:
+            # If 404 or other error, assume it doesn't exist
+            exists = False
+            
+        if not exists:
+            try:
+                self.client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config=models.VectorParams(size=vector_size, distance=models.Distance.COSINE),
+                )
+                logger.info(f"Created collection '{collection_name}'")
+            except Exception as e:
+                if "already exists" in str(e):
+                    logger.info(f"Collection '{collection_name}' already exists (caught during creation)")
+                else:
+                    logger.error(f"Failed to create collection: {e}")
+                    raise
         else:
             logger.info(f"Collection '{collection_name}' already exists")
 
     def clear_collection(self, collection_name: str):
         """Deletes and recreates the collection."""
-        if self.client.collection_exists(collection_name):
+        exists = False
+        try:
+            exists = self.client.collection_exists(collection_name)
+        except Exception:
+            exists = False
+            
+        if exists:
             self.client.delete_collection(collection_name)
             logger.info(f"Deleted collection '{collection_name}'")
         # Re-create is handled by create_collection called subsequently or explicitly here if needed.

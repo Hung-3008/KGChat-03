@@ -44,6 +44,7 @@ def main():
     # Get all JSON files
     all_files = sorted(list(data_dir.glob("*.json")))
     total_files = len(all_files)
+    
     logger.info(f"Found {total_files} files in {data_dir}")
     
     output_dir = Path("output")
@@ -65,11 +66,10 @@ def main():
         if log_path.exists():
             with log_path.open("r", encoding="utf-8") as f:
                 processed_files = set(line.strip() for line in f if line.strip())
-            logger.info(f"Resuming... Found {len(processed_files)} processed files in log.")
+            logger.info(f"Resuming from {len(processed_files)} processed files")
         else:
-            logger.info("Resume requested but no log file found. Starting from scratch.")
+            logger.info("No previous log found, starting fresh")
     else:
-        logger.info("Starting fresh (Resume=False). Clearing existing output.")
         if nodes_path.exists():
             nodes_path.unlink()
         if edges_path.exists():
@@ -84,41 +84,39 @@ def main():
         if isinstance(limit, int):
             remaining_limit = limit - len(processed_files)
             if remaining_limit <= 0:
-                logger.info(f"Limit ({limit}) reached or exceeded by already processed files ({len(processed_files)}). Nothing to do.")
+                logger.info(f"Limit reached ({limit} files). Nothing to do.")
                 files_to_process = []
             else:
                 files_to_process = files_to_process[:remaining_limit]
-                logger.info(f"Limit applied: {limit}. Already processed: {len(processed_files)}. Processing next {len(files_to_process)} files.")
-        else:
-             logger.info(f"Limit is not an integer ({limit}), processing all remaining files.")
     
-    logger.info(f"Total files to process in this run: {len(files_to_process)}")
-    
+    total_to_process = len(files_to_process)
     if not files_to_process:
         return
 
     # Process in batches
     for i in range(0, len(files_to_process), batch_size):
         batch_files = files_to_process[i : i + batch_size]
-        logger.info(f"Processing batch {i // batch_size + 1} (Files {i+1} to {min(i + batch_size, len(files_to_process))})...")
         
         batch_nodes = []
         batch_edges = []
         successful_files = []
         
-        for file_path in batch_files:
+        for idx, file_path in enumerate(batch_files):
+            current_file_num = i + idx + 1
+            logger.info(f"Processing file {current_file_num}/{total_to_process}: {file_path.name}")
+            
             try:
                 with Timer(time_logger, file_path.name, "Total File Processing"):
                     nodes, edges = extractor.extract_from_file(str(file_path))
                     batch_nodes.extend(nodes)
                     batch_edges.extend(edges)
+                logger.info(f"✓ Completed {file_path.name}: {len(nodes)} nodes, {len(edges)} edges")
                 successful_files.append(file_path.name)
             except Exception as e:
-                logger.error(f"Error processing file {file_path}: {e}")
+                logger.error(f"✗ Failed {file_path.name}: {e}")
         
         # Save batch results
         if batch_nodes or batch_edges:
-            logger.info(f"Saving batch results: {len(batch_nodes)} nodes, {len(batch_edges)} edges...")
             extractor.save_nodes(batch_nodes, nodes_path, append=True)
             extractor.save_edges(batch_edges, edges_path, append=True)
         
@@ -132,7 +130,7 @@ def main():
         del batch_nodes
         del batch_edges
         
-    logger.info("Graph creation complete.")
+    logger.info(f"✓ Completed all {total_to_process} files")
 
 if __name__ == "__main__":
     main()

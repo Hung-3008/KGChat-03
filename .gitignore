@@ -85,6 +85,13 @@ scripts/*
 !scripts/test_gemini_client.py
 !scripts/sample_input.jsonl
 !scripts/test_entity_linking.py
+!scripts/test_biosyn_duckdb.py
+!scripts/test_edge_extractor_biosyn.py
+!scripts/debug_graph_extraction.py
+!scripts/debug_schema.py
+!scripts/test_level2_nodes.py
+!scripts/debug_node_extractor.py
+!scripts/test_schema_fix.py
 *.ipynb
 commands.ipynb
 .github/*
@@ -94,3 +101,9 @@ backend/krissbert_custom/pytorch_model.bin
 outputs/*
 backend/krissbert_custom/prototypes/*
 backend/krissbert_custom/prototypes.tar.gz
+qdrant
+qdrant-x86_64-unknown-linux-gnu.tar.gz
+package-lock.json
+wget-log
+storage/
+.qdrant-initialized

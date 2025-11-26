@@ -251,7 +251,16 @@ For each entity that shares the same hierarchical depth with other entities, eva
 [ENTITIES_INPUT]
 
 ## OUTPUT INSTRUCTIONS
-Return ONLY a valid JSON objec
+Return ONLY a valid JSON object with the following structure:
+{
+  "entities": [
+    {
+      "name": "canonical name",
+      "semantic_type": "specific semantic type",
+      "mention": "exact text from document"
+    }
+  ]
+}
 
 ## REMEMBER
 - Focus on CLINICAL RELEVANCE in THIS SPECIFIC CONTEXT
@@ -289,6 +298,9 @@ UMLS nodes (entity to candidate CUIs and semantic types):
 
 UMLS edges (relation patterns between candidate CUIs of entity pairs):
 [UMLS EDGES]
+
+BioSyn Entity Linking (candidate CUIs from BioSyn):
+[BIOSYN HINTS]
 
 Return only a JSON array of relationship objects.
 """

@@ -22,20 +22,30 @@ class OllamaClient:
         )
         return response.message.content
 
-    def _structured_response(self, prompt: str, format: BaseModel) -> Dict:
+    def _structured_response(self, prompt: str, format: Union[BaseModel, Dict]) -> Dict:
         options = {"temperature": self.temperature, "top_p": self.top_p}
         if self.seed is not None:
             options["seed"] = self.seed
 
+        if isinstance(format, dict):
+            schema = format
+        else:
+            schema = format.model_json_schema()
+
         response = chat(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            format=format.model_json_schema(),
+            format=schema,
             options=options,
         )
-        return dict(format.model_validate_json(response.message.content))
+        
+        if isinstance(format, dict):
+            import json
+            return json.loads(response.message.content)
+        else:
+            return dict(format.model_validate_json(response.message.content))
 
-    def generate(self, prompt: str, format: Optional[BaseModel] = None) -> Union[str, Dict]:
+    def generate(self, prompt: str, format: Optional[Union[BaseModel, Dict]] = None) -> Union[str, Dict]:
         if format:
             return self._structured_response(prompt, format)
         else:

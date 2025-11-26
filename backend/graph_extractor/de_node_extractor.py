@@ -1,5 +1,5 @@
 import json
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from backend.encoders.transformer_encoder import TransformerEncoder
 from backend.graph_extractor.schema import (
     Activity, Phenomenon, PhysicalObject, ConceptualEntity, Entity, ValidatedEntity
@@ -27,13 +27,51 @@ class NodeExtractor:
     def get_mentioned_text(self, text: str, entities: List[Entity]) -> List[str]:
         pass
 
-    def clean_empty_entities(self, entities: Dict) -> Dict:
+    def clean_empty_entities(self, entities: Union[Dict, List]) -> Dict:
+        if isinstance(entities, list):
+            if entities and isinstance(entities[0], dict):
+                entities = entities[0]
+            else:
+                return {}
+                
         cleaned = {}
+        if not isinstance(entities, dict):
+             return {}
+             
         for key, value in entities.items():
             if isinstance(value, list) and value:
-                cleaned[key] = value
+                cleaned_values = []
+                for item in value:
+                    if isinstance(item, dict):
+                        # If it has semantic_type, keep the dict (Stage 3 output)
+                        if "semantic_type" in item and ("name" in item or "mention" in item):
+                            cleaned_values.append(item)
+                        # Otherwise extract name (Stage 1 output might be wrapped)
+                        elif "name" in item:
+                            cleaned_values.append(item["name"])
+                        elif "mention" in item:
+                            cleaned_values.append(item["mention"])
+                        elif item:
+                            cleaned_values.append(str(list(item.values())[0]))
+                    elif isinstance(item, str):
+                        cleaned_values.append(item)
+                
+                if cleaned_values:
+                    cleaned[key] = cleaned_values
         return cleaned
     
+
+    def build_simple_schema(self, model_class) -> Dict:
+        """Manually build JSON schema to avoid Pydantic crash."""
+        properties = {}
+        for name, field in model_class.model_fields.items():
+            # All fields in cluster models are List[str]
+            properties[name] = {"type": "array", "items": {"type": "string"}}
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": list(properties.keys())
+        }
 
     def extract_entities(self, text: str, prompt_template: str, output_schema) -> List[Dict]:
         if not text or not text.strip():
@@ -41,10 +79,26 @@ class NodeExtractor:
         
         prompt = prompt_template.replace("[INPUT TEXT]", text)
         try:
-            resp = self.llm_client.generate(prompt=prompt, format=output_schema)
-            return self.clean_empty_entities(resp)
-        except Exception:
-            return []
+            # Build schema manually
+            schema = self.build_simple_schema(output_schema)
+            resp = self.llm_client.generate(prompt=prompt, format=schema)
+            # logger.info(f"NodeExtractor LLM Resp: {resp}")
+            
+            # Resp should be a dict now since we passed format
+            if isinstance(resp, dict):
+                 return self.clean_empty_entities(resp)
+            elif isinstance(resp, str):
+                 # Fallback if client didn't parse it
+                 try:
+                     return self.clean_empty_entities(json.loads(resp))
+                 except:
+                     return {}
+            else:
+                 return {}
+
+        except Exception as e:
+            logger.error(f"Error in extract_entities: {e}")
+            return {}
     
 
     def llm_filter_entities(self, text: str, entities: Dict) -> Dict:
@@ -53,10 +107,43 @@ class NodeExtractor:
         
         entities_json = json.dumps(entities)
         prompt = CONTEXT_ENTITY_FILTER_PROMPT.replace("[CLINICAL_INPUT_TEXT]", text).replace("[ENTITIES_INPUT]", entities_json)
+        
+        # Manual schema for ValidatedEntity
+        schema = {
+          "type": "object",
+          "properties": {
+            "entities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "semantic_type": {"type": "string"},
+                  "mention": {"type": "string"}
+                },
+                "required": ["name", "semantic_type", "mention"]
+              }
+            }
+          },
+          "required": ["entities"]
+        }
+
         try:
-            resp = self.llm_client.generate(prompt=prompt, format=ValidatedEntity)
-            return self.clean_empty_entities(resp)
-        except Exception:
+            resp = self.llm_client.generate(prompt=prompt, format=schema)
+            # logger.info(f"LLM Filter Resp: {resp}")
+            
+            if isinstance(resp, dict):
+                 return self.clean_empty_entities(resp)
+            elif isinstance(resp, str):
+                 try:
+                     return self.clean_empty_entities(json.loads(resp))
+                 except:
+                     return {}
+            else:
+                 return {}
+
+        except Exception as e:
+            logger.error(f"Error in llm_filter_entities: {e}")
             return {}
 
     def extract (self, text: str, file_name: str = "unknown") -> List[Dict]:
@@ -111,7 +198,23 @@ class NodeExtractor:
         # Stage 4: Embedding
         if self.time_logger:
             with Timer(self.time_logger, file_name, "Node Stage 4: Embedding"):
-                entities_list = llm_filtered_entities.get("entities", []) if isinstance(llm_filtered_entities, dict) else []
+                entities_list = []
+                if isinstance(llm_filtered_entities, dict):
+                    if "entities" in llm_filtered_entities:
+                        entities_list = llm_filtered_entities["entities"]
+                    else:
+                        # Flatten grouped structure
+                        for cluster, types in llm_filtered_entities.items():
+                            if isinstance(types, dict):
+                                for sem_type, names in types.items():
+                                    if isinstance(names, list):
+                                        for name in names:
+                                            if isinstance(name, str):
+                                                entities_list.append({"name": name, "semantic_type": sem_type})
+                                            elif isinstance(name, dict):
+                                                 n = name.get("name") or name.get("mention")
+                                                 if n:
+                                                     entities_list.append({"name": n, "semantic_type": sem_type})
                 
                 if not entities_list:
                     return []
@@ -140,7 +243,25 @@ class NodeExtractor:
                     name_embeddings = []
         else:
             # Logic duplication avoided by better structure, but for now copy-paste with timer wrapper
-            entities_list = llm_filtered_entities.get("entities", []) if isinstance(llm_filtered_entities, dict) else []
+            entities_list = []
+            if isinstance(llm_filtered_entities, dict):
+                if "entities" in llm_filtered_entities:
+                    entities_list = llm_filtered_entities["entities"]
+                else:
+                    # Flatten grouped structure
+                    for cluster, types in llm_filtered_entities.items():
+                        if isinstance(types, dict):
+                            for sem_type, names in types.items():
+                                if isinstance(names, list):
+                                    for name in names:
+                                        if isinstance(name, str):
+                                            entities_list.append({"name": name, "semantic_type": sem_type})
+                                        elif isinstance(name, dict):
+                                             # Handle if name is dict
+                                             n = name.get("name") or name.get("mention")
+                                             if n:
+                                                 entities_list.append({"name": n, "semantic_type": sem_type})
+
             if not entities_list:
                 return []
             names = []
