@@ -52,50 +52,36 @@ def main(cfg: DictConfig):
     if output_dir:
         pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     
-    # Prepare output name pattern
-    # If cfg.output_prototypes is "prototypes/embeddings.pkl", we want "prototypes/embeddings_part_0.pkl"
-    base_name, ext = os.path.splitext(cfg.output_prototypes)
-    
     iterator = generate_vectors(encoder, tokenizer, ds, cfg.batch_size, cfg.max_length, is_prototype=True)
     
-    buffer = []
-    chunk_id = 0
-    CHUNK_SIZE = 100000  # Adjust as needed
+    # Collect all records in RAM
+    all_records = []
     
-    total_saved = 0
+    logger.info("Loading all records into memory...")
     
-    # Open name_cuis file once and append
+    # Open name_cuis file once and write
     with open(cfg.output_name_cuis, 'w') as f_names:
         for batch in iterator:
-            buffer.extend(batch)
+            all_records.extend(batch)
             
-            # Write names immediately to avoid storing them in memory if possible, 
-            # but we need them in the buffer for pickle? 
-            # The buffer contains (metadata, vector).
-            # We can write names from the batch.
+            # Write names for this batch
             for metadata, vector in batch:
                 cui = metadata['cui']
                 alias = metadata['alias']
                 f_names.write(f"{cui}||{alias}\n")
             
-            if len(buffer) >= CHUNK_SIZE:
-                chunk_path = f"{base_name}_part_{chunk_id}{ext}"
-                logger.info(f"Saving chunk {chunk_id} to {chunk_path} ({len(buffer)} items)")
-                with open(chunk_path, mode="wb") as f:
-                    pickle.dump(buffer, f)
-                total_saved += len(buffer)
-                buffer = []
-                chunk_id += 1
-        
-        # Save remaining
-        if buffer:
-            chunk_path = f"{base_name}_part_{chunk_id}{ext}"
-            logger.info(f"Saving chunk {chunk_id} to {chunk_path} ({len(buffer)} items)")
-            with open(chunk_path, mode="wb") as f:
-                pickle.dump(buffer, f)
-            total_saved += len(buffer)
-            
-    logger.info("Total data processed %d. Written chunks to %s*", total_saved, base_name)
+            # Log progress every 10000 records
+            if len(all_records) % 10000 == 0:
+                logger.info(f"Loaded {len(all_records)} records so far...")
+    
+    logger.info(f"Total records loaded: {len(all_records)}")
+    
+    # Save all records to a single pickle file
+    logger.info(f"Saving all records to {cfg.output_prototypes}...")
+    with open(cfg.output_prototypes, mode="wb") as f:
+        pickle.dump(all_records, f)
+    
+    logger.info(f"Successfully saved {len(all_records)} records to {cfg.output_prototypes}")
 
 
 if __name__ == "__main__":

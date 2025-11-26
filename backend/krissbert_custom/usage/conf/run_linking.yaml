@@ -1,5 +1,5 @@
 # path to pretrained model and tokenizer
-model_name_or_path: /home/nguyenthang/krissbert_local
+model_name_or_path: ./backend/krissbert_custom
 
 test_data:
   _target_: utils.MedMentionsDataset
