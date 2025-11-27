@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageBubble } from './components/MessageBubble';
 import { ChatInput } from './components/ChatInput';
 import { Sidebar } from './components/Sidebar';
+import { NavigationSidebar } from './components/NavigationSidebar';
 import { Message, Sender, RetrievalSteps } from './types';
 import { sendMessageToBackend } from './services/api';
 
 const INITIAL_MESSAGES: Message[] = [
   {
     id: '1',
-    text: "Hello, I'm your AI Medical Assistant. How are you feeling today? Please describe your symptoms.",
+    text: "Hello! I'm Medibot, your personal health assistant. How can I help you today? You can describe your symptoms, ask about a condition, or track your vitals.",
     sender: Sender.BOT,
     timestamp: '10:30 AM',
   },
@@ -103,29 +104,27 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background-light dark:bg-background-dark">
-      <main className="flex-1 flex flex-col h-full relative">
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-5 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-10">
+    <div className="flex h-screen overflow-hidden bg-background-light dark:bg-background-dark font-body">
+      {/* Left Navigation Sidebar */}
+      <NavigationSidebar />
+
+      {/* Main Chat Area */}
+      <main className="flex-1 flex flex-col h-full relative bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+        {/* Header - Simplified */}
+        <header className="flex items-center justify-between px-8 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-10">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white font-display">
-              Patient Consultation
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Interacting with your AI Medical Assistant
-            </p>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Conversation</h2>
           </div>
-          <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <span className="material-icons-outlined text-slate-600 dark:text-slate-400">more_vert</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span className="text-xs font-medium text-slate-500">Online</span>
+          </div>
         </header>
 
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar">
-          <div className="max-w-4xl mx-auto flex flex-col justify-end min-h-full">
+          <div className="max-w-3xl mx-auto flex flex-col justify-end min-h-full space-y-6">
             {messages.map((msg, index) => {
-              // Check if previous message was from same sender to group visually (optional, but good for UI)
-              // For now, adhering strictly to design where every bot message has an avatar
               return <MessageBubble key={msg.id} message={msg} />;
             })}
             <div ref={messagesEndRef} />
@@ -133,14 +132,14 @@ const App: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className="px-4 md:px-8 pb-6 md:pb-8 pt-2 bg-gradient-to-t from-background-light via-background-light to-transparent dark:from-background-dark dark:via-background-dark">
-          <div className="max-w-4xl mx-auto">
+        <div className="px-4 md:px-8 pb-6 pt-2">
+          <div className="max-w-3xl mx-auto">
             <ChatInput onSendMessage={handleSendMessage} disabled={isProcessing} />
           </div>
         </div>
       </main>
 
-      {/* Sidebar */}
+      {/* Right Retrieval Sidebar */}
       <Sidebar steps={retrievalSteps} />
     </div>
   );

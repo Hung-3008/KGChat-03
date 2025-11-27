@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, KeyboardEvent } from 'react';
 
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
@@ -6,44 +6,48 @@ interface ChatInputProps {
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
-  const [text, setText] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [input, setInput] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (text.trim() && !disabled) {
-      onSendMessage(text);
-      setText('');
+  const handleSend = () => {
+    if (input.trim() && !disabled) {
+      onSendMessage(input.trim());
+      setInput('');
     }
   };
 
-  // Keep focus on input after send if not disabled
-  useEffect(() => {
-    if (!disabled && inputRef.current) {
-      inputRef.current.focus();
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
-  }, [disabled]);
+  };
 
   return (
-    <div className="mt-4">
-      <form onSubmit={handleSubmit} className="relative">
+    <div className="relative">
+      <div className="bg-slate-100 dark:bg-slate-800 rounded-full flex items-center p-2 pl-6 shadow-inner border border-transparent focus-within:border-secondary/30 focus-within:bg-white dark:focus-within:bg-slate-900 transition-all duration-200">
         <input
-          ref={inputRef}
           type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Describe your symptoms..."
           disabled={disabled}
-          className="w-full pl-6 pr-14 py-4 bg-white dark:bg-slate-800 border-none shadow-sm rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-slate-700 dark:text-slate-200 placeholder-slate-400 transition-all disabled:opacity-50"
-          placeholder={disabled ? "Please wait..." : "Type your message here..."}
+          className="flex-1 bg-transparent border-none outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm py-2"
         />
-        <button
-          type="submit"
-          disabled={!text.trim() || disabled}
-          className="absolute inset-y-2 right-2 w-12 flex items-center justify-center text-white bg-primary rounded-lg hover:bg-primary-hover disabled:bg-slate-300 dark:disabled:bg-slate-700 transition-colors"
-        >
-          <span className="material-icons-outlined transform -rotate-45 relative left-[-2px] top-[1px]">send</span>
-        </button>
-      </form>
+        <div className="flex items-center gap-1 pr-1">
+
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || disabled}
+            className={`p-3 rounded-full flex items-center justify-center transition-all duration-200 ${input.trim() && !disabled
+              ? 'bg-secondary hover:bg-secondary-light text-white shadow-md transform hover:scale-105'
+              : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+              }`}
+          >
+            <span className="material-icons-outlined text-lg">arrow_upward</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
