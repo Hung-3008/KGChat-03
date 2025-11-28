@@ -33,17 +33,33 @@ class Neo4jHelper:
         logger.info("Cleared all nodes and relationships from Neo4j")
 
     def drop_constraints(self):
-        """Drops unique constraint on Level1 nodes if exists."""
+        """Drops constraints that might conflict with insertion."""
         with self.driver.session() as session:
-            # Get all constraints for Level1 nodes
+            # Get all constraints
             result = session.run("SHOW CONSTRAINTS")
             constraints = [record for record in result]
             
-            # Drop constraints related to Level1 nodes
+            # Drop constraints related to Level1, Level2, Level3 nodes (except for id uniqueness which we want to keep)
             for constraint in constraints:
                 constraint_name = constraint.get("name")
-                # Check if this constraint is for Level1 label
-                if constraint_name and "Level1" in str(constraint):
+                labels = constraint.get("labelsOrTypes", [])
+                properties = constraint.get("properties", [])
+                
+                # Drop Level2.cui and other potentially conflicting constraints
+                # But keep Level1.id, Level2.id, Level3.id for data integrity
+                should_drop = False
+                
+                if "Level2" in labels and "cui" in properties:
+                    should_drop = True
+                    logger.info(f"Dropping Level2.cui constraint: {constraint_name}")
+                elif "Level3" in labels and "case_id" in properties:
+                    should_drop = True
+                    logger.info(f"Dropping Level3.case_id constraint: {constraint_name}")
+                elif "Level3" in labels and "subject_id" in properties:
+                    should_drop = True
+                    logger.info(f"Dropping Level3.subject_id constraint: {constraint_name}")
+                
+                if should_drop:
                     try:
                         session.run(f"DROP CONSTRAINT {constraint_name}")
                         logger.info(f"Dropped constraint: {constraint_name}")
@@ -73,10 +89,18 @@ class Neo4jHelper:
             n.level = node.level
         WITH n, node
         CALL apoc.do.when(node.level = 'Level 2', 'SET n:Level2', '', {n:n}) YIELD value
-        RETURN count(value)
+        RETURN count(value) as nodes_processed
         """
-        with self.driver.session() as session:
-            session.run(query, nodes=nodes)
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, nodes=nodes)
+                summary = result.consume()
+                logger.debug(f"Inserted batch: {summary.counters.nodes_created} created, {summary.counters.properties_set} properties set")
+                return summary.counters.nodes_created
+        except Exception as e:
+            logger.error(f"Failed to insert nodes batch: {e}")
+            logger.error(f"First node in batch: {nodes[0] if nodes else 'empty batch'}")
+            raise
 
     def insert_edges(self, edges: List[Dict]):
         """
@@ -89,10 +113,18 @@ class Neo4jHelper:
         MATCH (t:Level1 {id: edge.target_id})
         CALL apoc.merge.relationship(s, edge.relation, {}, {}, t, {})
         YIELD rel
-        RETURN count(rel)
+        RETURN count(rel) as edges_processed
         """
-        with self.driver.session() as session:
-            session.run(query, edges=edges)
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, edges=edges)
+                summary = result.consume()
+                logger.debug(f"Inserted batch: {summary.counters.relationships_created} relationships created")
+                return summary.counters.relationships_created
+        except Exception as e:
+            logger.error(f"Failed to insert edges batch: {e}")
+            logger.error(f"First edge in batch: {edges[0] if edges else 'empty batch'}")
+            raise
 
     def query(self, cypher_query: str, parameters: Dict = None) -> List[Dict]:
         """

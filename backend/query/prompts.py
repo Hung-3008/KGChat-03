@@ -11,5 +11,6 @@ Graph Context:
 Google Grounding Context:
 {google_context}
 
+Carefully analyze the information provided and generate a clear, concise, and easy-to-understand answer to the question.
 Answer:
 """

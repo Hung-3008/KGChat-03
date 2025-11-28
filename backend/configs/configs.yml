@@ -20,6 +20,6 @@ Create:
   Resume: False 
 
 Insert:
-  Batch_size: 10
-  Limit: 100
+  Batch_size: 1000
+  Limit: 100000
   Resume: False

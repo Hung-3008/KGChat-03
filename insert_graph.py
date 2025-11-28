@@ -125,6 +125,9 @@ def main():
     
     # Insert Nodes to Neo4j and Qdrant
     logger.info("Inserting nodes...")
+    total_neo4j_inserted = 0
+    total_qdrant_inserted = 0
+    
     for i in tqdm(range(0, len(node_list), batch_size), desc="Nodes"):
         batch = node_list[i : i + batch_size]
         
@@ -138,7 +141,13 @@ def main():
             "cui": n.get("cui", ""),
             "level": n.get("level", "Level 1")
         } for n in batch]
-        neo4j.insert_nodes(neo4j_nodes)
+        
+        try:
+            inserted_count = neo4j.insert_nodes(neo4j_nodes)
+            total_neo4j_inserted += (inserted_count or 0)
+        except Exception as e:
+            logger.error(f"Failed to insert Neo4j batch at index {i}: {e}")
+            # Continue with next batch instead of failing completely
         
         # Qdrant Batch
         qdrant_points = []
@@ -157,7 +166,14 @@ def main():
                     }
                 })
         if qdrant_points:
-            qdrant.insert_points(collection_name, qdrant_points)
+            try:
+                qdrant.insert_points(collection_name, qdrant_points)
+                total_qdrant_inserted += len(qdrant_points)
+            except Exception as e:
+                logger.error(f"Failed to insert Qdrant batch at index {i}: {e}")
+    
+    logger.info(f"Node insertion complete: {total_neo4j_inserted} nodes to Neo4j, {total_qdrant_inserted} vectors to Qdrant")
+
 
     # 2. Process Edges
     if edges_path.exists():
@@ -188,11 +204,32 @@ def main():
         
         # Insert Edges to Neo4j
         logger.info("Inserting edges...")
+        total_edges_inserted = 0
+        
         for i in tqdm(range(0, len(valid_edges), batch_size), desc="Edges"):
             batch = valid_edges[i : i + batch_size]
-            neo4j.insert_edges(batch)
+            try:
+                inserted_count = neo4j.insert_edges(batch)
+                total_edges_inserted += (inserted_count or 0)
+            except Exception as e:
+                logger.error(f"Failed to insert edges batch at index {i}: {e}")
+        
+        logger.info(f"Edge insertion complete: {total_edges_inserted} relationships created in Neo4j")
     else:
         logger.info("No edges file found.")
+
+    # Final Verification
+    logger.info("Verifying insertion...")
+    neo4j_count = neo4j.query("MATCH (n:Level1) RETURN count(n) as count")[0]['count']
+    neo4j_rels = neo4j.query("MATCH ()-[r]->() RETURN count(r) as count")[0]['count']
+    
+    logger.info(f"✅ Neo4j verification: {neo4j_count} nodes, {neo4j_rels} relationships")
+    
+    try:
+        qdrant_info = qdrant.client.get_collection(collection_name)
+        logger.info(f"✅ Qdrant verification: {qdrant_info.points_count} vectors in '{collection_name}'")
+    except Exception as e:
+        logger.warning(f"Could not verify Qdrant: {e}")
 
     neo4j.close()
     logger.info("Graph insertion complete.")
