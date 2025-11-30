@@ -12,7 +12,7 @@ class QdrantHelper:
         api_key = os.getenv("QDRANT_API_KEY", None)
         
         try:
-            self.client = QdrantClient(url=url, api_key=api_key)
+            self.client = QdrantClient(url=url, api_key=api_key, timeout=120)
             logger.info("Connected to Qdrant")
         except Exception as e:
             logger.error(f"Failed to connect to Qdrant: {e}")
@@ -45,15 +45,14 @@ class QdrantHelper:
 
     def clear_collection(self, collection_name: str):
         """Deletes and recreates the collection."""
-        exists = False
         try:
-            exists = self.client.collection_exists(collection_name)
-        except Exception:
-            exists = False
-            
-        if exists:
             self.client.delete_collection(collection_name)
             logger.info(f"Deleted collection '{collection_name}'")
+        except Exception as e:
+            # If collection doesn't exist, Qdrant might raise an error or return false.
+            # We log it but don't fail, as the goal is to ensure it's gone.
+            logger.info(f"Attempted to delete collection '{collection_name}', result: {e}")
+        
         # Re-create is handled by create_collection called subsequently or explicitly here if needed.
         # For 'clear', we usually just delete. The caller should re-create.
 

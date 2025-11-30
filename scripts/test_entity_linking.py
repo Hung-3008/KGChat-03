@@ -1,87 +1,66 @@
-import os
 import sys
+import os
 import json
 import logging
+from typing import List, Dict
 
-# Setup logging
+# Add project root to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+
+from backend.krissbert_custom.usage.run_entity_linking import EntityLinker
+
+# Setup logger
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def run_test():
-    project_root = "/home/hung/KGChat-03"
-    
-    # Add usage dir to sys.path to allow imports of utils and run_entity_linking
-    usage_dir = os.path.join(project_root, "backend/krissbert_custom/usage")
-    if usage_dir not in sys.path:
-        sys.path.append(usage_dir)
-        
-    try:
-        from run_entity_linking import EntityLinker
-    except ImportError as e:
-        print(f"Error importing EntityLinker: {e}")
-        return
-
-    # Paths
-    sample_input_path = os.path.join(project_root, "scripts/sample_input.jsonl")
-    model_path = os.path.join(project_root, "backend/krissbert_custom")
-    encoded_files = [os.path.join(project_root, "backend/krissbert_custom/prototypes/embeddings.pkl")]
-    entity_list_names = os.path.join(project_root, "backend/krissbert_custom/prototypes/name_cuis")
-    
-    # Load sample data
+def load_data(file_path: str) -> List[Dict]:
     data = []
-    with open(sample_input_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             if line.strip():
                 data.append(json.loads(line))
+    return data
+
+def main():
+    # Config
+    model_path = "/media/hung/data1/codes/projects/FHC/backend/krissbert_custom"
+    # Check if model exists, if not fallback to bert-base-uncased for testing logic
+    if not os.path.exists(os.path.join(model_path, "pytorch_model.bin")):
+        logger.warning(f"Model not found at {model_path}, falling back to 'bert-base-uncased'")
+        model_path = "bert-base-uncased"
+        
+    input_file = "/media/hung/data1/codes/projects/FHC/scripts/sample_input.jsonl"
     
-    print(f"Loaded {len(data)} samples.")
-    
-    # Initialize Linker
-    print("Initializing EntityLinker...")
-    # Use /workspace for index cache to avoid disk space issues
-    index_cache_path = "/workspace/krissbert_index_cache"
-    
+    # Initialize EntityLinker
+    logger.info("Initializing EntityLinker...")
     linker = EntityLinker(
         model_name_or_path=model_path,
-        encoded_files=encoded_files,
-        entity_list_names=entity_list_names,
-        index_path=index_cache_path,
-        device="cuda" # or "cpu" if no gpu
+        device="cuda" # or "cpu"
     )
     
-    # Predict
-    # Load CUI to Name mapping
-    print("Loading CUI to Name mapping...")
-    cui_to_name = {}
-    with open(entity_list_names, 'r', encoding='utf-8') as f:
-        for line in f:
-            if '||' in line:
-                cuis_str, name = line.strip().split('||')
-                for cui in cuis_str.split('|'):
-                    # Store the first name encountered for each CUI, or overwrite? 
-                    # Let's store the first one we see if not present, to keep it stable.
-                    # Or maybe store all and pick the longest? 
-                    # For now, just keeping the first one encountered is fine.
-                    if cui not in cui_to_name:
-                        cui_to_name[cui] = name
-
-    # Predict
-    print("Running prediction...")
-    results = linker.predict(data, top_k=3)
+    # Load data
+    logger.info(f"Loading data from {input_file}...")
+    data = load_data(input_file)
     
-    print("\n=== ENTITY LINKING RESULTS ===\n")
-    for i, res in enumerate(results):
-        print(f"Sample {i+1}:")
-        print(f" MENTION: {res['mention']}")
-        
-        if res['candidates']:
-            print(f" TOP {len(res['candidates'])} CANDIDATES:")
-            for j, cand in enumerate(res['candidates']):
-                cui = cand['cui']
-                entity_name = cui_to_name.get(cui, "Unknown Name")
-                print(f"  {j+1}. CUI: {cui} ({entity_name}) (Score: {cand['score']:.4f})")
-        else:
-            print(" PRED CUI: None")
-        print("-" * 50)
+    # Predict
+    logger.info("Running prediction...")
+    results = linker.predict(data, top_k=5)
+    
+    # Print results
+    print("\n" + "="*50)
+    print("ENTITY LINKING RESULTS")
+    print("="*50)
+    for res in results:
+        print(f"\nMention: {res['mention']}")
+        print("-" * 20)
+        for i, cand in enumerate(res['candidates']):
+            print(f"{i+1}. {cand['name']} (CUI: {cand['cui']})")
+            print(f"   Score: {cand['score']:.4f}")
+            if cand['definition']:
+                print(f"   Def: {cand['definition'][:100]}...")
+            if cand['icd']:
+                print(f"   ICD: {cand['icd']}")
+    print("\n" + "="*50)
 
 if __name__ == "__main__":
-    run_test()
+    main()

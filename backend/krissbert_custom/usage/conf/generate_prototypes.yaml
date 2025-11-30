@@ -1,8 +1,9 @@
-model_name_or_path: /home/hung/KGChat-03/backend/krissbert_custom
+model_name_or_path: /media/hung/data1/codes/projects/FHC/backend/krissbert_custom
 train_data:
   _target_: utils_umls.PreprocessedUMLS
-  UMLS_path: /home/hung/KGChat-03/backend/krissbert_custom/umls_full.json
-batch_size: 256
+  UMLS_path: /media/hung/data1/codes/projects/FHC/backend/krissbert_custom/umls_full.json
+batch_size: 128
 max_length: 64
 output_prototypes: backend/krissbert_custom/prototypes/embeddings.pkl
 output_name_cuis: backend/krissbert_custom/prototypes/name_cuis
+clear: True     # Clear Qdrant collection before processing

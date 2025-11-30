@@ -1,5 +1,5 @@
 import json
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from backend.encoders.transformer_encoder import TransformerEncoder
 from backend.graph_extractor.schema import (
     Activity, Phenomenon, PhysicalObject, ConceptualEntity, Entity, ValidatedEntity
@@ -24,8 +24,22 @@ class NodeExtractor:
         self.time_logger = time_logger
     
 
-    def get_mentioned_text(self, text: str, entities: List[Entity]) -> List[str]:
-        pass
+    def extract_context(self, text: str, mention: str, window_size: int = 50) -> Tuple[str, str]:
+        if not mention or mention not in text:
+            return "", ""
+        
+        start_idx = text.find(mention)
+        end_idx = start_idx + len(mention)
+        
+        # Extract left context
+        left_start = max(0, start_idx - window_size)
+        context_left = text[left_start:start_idx]
+        
+        # Extract right context
+        right_end = min(len(text), end_idx + window_size)
+        context_right = text[end_idx:right_end]
+        
+        return context_left, context_right
 
     def clean_empty_entities(self, entities: Union[Dict, List]) -> Dict:
         if isinstance(entities, list):
@@ -222,16 +236,31 @@ class NodeExtractor:
                 # Extract entity names
                 names = []
                 semantic_types = []
+                mentions = []
+                contexts_left = []
+                contexts_right = []
+                
                 for e in entities_list:
                     if isinstance(e, dict):
                         name = e.get("name", "").strip()
                         semantic_type = e.get("semantic_type", "").strip()
+                        mention = e.get("mention", "").strip()
                     else:
                         name = getattr(e, "name", "").strip()
                         semantic_type = getattr(e, "semantic_type", "").strip()
+                        mention = getattr(e, "mention", "").strip()
                     if name:
                         names.append(name)
                         semantic_types.append(semantic_type)
+                        
+                        # Extract context
+                        if not mention:
+                            mention = name # Fallback
+                        mentions.append(mention)
+                        
+                        ctx_left, ctx_right = self.extract_context(text, mention)
+                        contexts_left.append(ctx_left)
+                        contexts_right.append(ctx_right)
                 
                 if not names:
                     return []
@@ -266,16 +295,33 @@ class NodeExtractor:
                 return []
             names = []
             semantic_types = []
+            mentions = []
+            contexts_left = []
+            contexts_right = []
+            
             for e in entities_list:
                 if isinstance(e, dict):
                     name = e.get("name", "").strip()
                     semantic_type = e.get("semantic_type", "").strip()
+                    mention = e.get("mention", "").strip()
                 else:
                     name = getattr(e, "name", "").strip()
                     semantic_type = getattr(e, "semantic_type", "").strip()
+                    mention = getattr(e, "mention", "").strip()
+                
                 if name:
                     names.append(name)
                     semantic_types.append(semantic_type)
+                    
+                    # Extract context
+                    if not mention:
+                        mention = name # Fallback
+                    mentions.append(mention)
+                    
+                    ctx_left, ctx_right = self.extract_context(text, mention)
+                    contexts_left.append(ctx_left)
+                    contexts_right.append(ctx_right)
+
             if not names:
                 return []
             try:
@@ -291,6 +337,9 @@ class NodeExtractor:
                     "name": names[i],
                     "semantic_type": semantic_types[i],
                     "embedding": name_embeddings[i],
+                    "mention": mentions[i] if i < len(mentions) else names[i],
+                    "context_left": contexts_left[i] if i < len(contexts_left) else "",
+                    "context_right": contexts_right[i] if i < len(contexts_right) else "",
                 })
         
         return output

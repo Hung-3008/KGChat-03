@@ -516,6 +516,8 @@ class Entity(BaseModel):
     name: str 
     semantic_type: str
     mention: str
+    context_left: str = ""
+    context_right: str = ""
 
 class ValidatedEntity(BaseModel):
     entities: List[Entity]

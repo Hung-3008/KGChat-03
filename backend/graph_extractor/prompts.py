@@ -271,13 +271,12 @@ Return ONLY a valid JSON object with the following structure:
 """
 
 EDGE_EXTRACTION_PROMPT = """
-You are a medical expert. Extract relationships from the text using the entities and UMLS hints below.
+You are a medical expert. Extract relationships from the text using the entities below.
 
 Rules:
-- Only use information within the provided clinical text and UMLS hints.
+- Only use information within the provided clinical text.
 - The relationship type must be one of: [treats, causes, associated_with, side_effect_of, diagnosed_by].
 - Only create relationships between entities that appear in the provided entity list.
-- UMLS nodes and edges are hints; do not invent relations not supported by the text.
 
 For each relationship, return a JSON object with:
 - subject: exact entity name from the entity list
@@ -292,15 +291,6 @@ Clinical text:
 
 Provided entities (exact names):
 [ENTITIES LIST]
-
-UMLS nodes (entity to candidate CUIs and semantic types):
-[UMLS NODES]
-
-UMLS edges (relation patterns between candidate CUIs of entity pairs):
-[UMLS EDGES]
-
-BioSyn Entity Linking (candidate CUIs from BioSyn):
-[BIOSYN HINTS]
 
 Return only a JSON array of relationship objects.
 """

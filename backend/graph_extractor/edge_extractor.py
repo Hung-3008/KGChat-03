@@ -11,9 +11,8 @@ if project_root not in sys.path:
 
 from backend.graph_extractor.schema import ExtractedEdges, ValidatedEntity, Entity, Edge
 from backend.graph_extractor.prompts import EDGE_EXTRACTION_PROMPT, EDGE_VALIDATION_PROMPT
-from backend.utils.umls_entity_lookup import build_umls_prompt_features, UMLSEntityLookup
 from backend.utils.time_logger import TimeLogger, Timer, setup_logger
-from backend.BioSyn.inference import BioSynInference
+from backend.krissbert_custom.usage.run_entity_linking import EntityLinker
 
 logger = setup_logger("edge_extractor")
 
@@ -23,26 +22,26 @@ class EdgeExtractor:
         self.model_name = model_name
         self.time_logger = time_logger
         
-        # Initialize BioSyn
+        # Initialize Krissbert EntityLinker
         try:
-            self.biosyn = BioSynInference()
-            # logger.info("BioSynInference initialized successfully.")
+            # Path to Krissbert model - assuming it's in the standard location or passed via config
+            # For now hardcoding or using a default, ideally should be in config
+            krissbert_path = "backend/krissbert_custom" 
+            if not os.path.exists(os.path.join(krissbert_path, "pytorch_model.bin")):
+                 # Fallback or check another path if needed, or just log warning
+                 logger.warning(f"Krissbert model not found at {krissbert_path}, using 'bert-base-uncased' for testing/fallback")
+                 krissbert_path = "bert-base-uncased"
+
+            self.entity_linker = EntityLinker(
+                model_name_or_path=krissbert_path,
+                device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu" # Simple check, can be improved
+            )
+            # logger.info("EntityLinker initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize BioSynInference: {e}")
-            self.biosyn = None
+            logger.error(f"Failed to initialize EntityLinker: {e}")
+            self.entity_linker = None
     
-    @lru_cache(maxsize=1000)
-    def _cached_biosyn_predict(self, mention: str) -> str:
-        """Cached BioSyn prediction to avoid redundant computations"""
-        if not self.biosyn:
-            return "{}"
-        try:
-            import json
-            result = self.biosyn.predict(mention)
-            return json.dumps(result)
-        except Exception as e:
-            logger.warning(f"BioSyn prediction failed for '{mention}': {e}")
-            return "{}"
+    # Removed _cached_biosyn_predict as it is no longer used
     
 
     def extract(self, text: str, nodes: Union[List[Dict], ValidatedEntity], file_name: str = "unknown") -> Tuple[ExtractedEdges, List[Dict]]:  
@@ -65,42 +64,30 @@ class EdgeExtractor:
         else:
             return ExtractedEdges(edges=[]), []
 
-        # Build compact UMLS features for the current entities
-        if self.time_logger:
-            with Timer(self.time_logger, file_name, "Edge: UMLS Lookup"):
-                umls_features = build_umls_prompt_features(
-                    entities_list,
-                    db_path="data/umls.duckdb",
-                    max_candidates_per_entity=1,
-                    max_relations_per_pair=2,
-                )
-        else:
-            umls_features = build_umls_prompt_features(
-                entities_list,
-                db_path="data/umls.duckdb",
-                max_candidates_per_entity=1,
-                max_relations_per_pair=2,
-            )
+        # Filter entities for LLM prompt (remove context, embeddings, etc.)
+        prompt_entities = []
+        for e in entities_list:
+            prompt_entities.append({
+                "name": e.get("name"),
+                "semantic_type": e.get("semantic_type")
+            })
+        prompt_nodes_dict = {"entities": prompt_entities}
 
-        # BioSyn Entity Linking & Level 2 Node Creation
-        biosyn_hints = []
+        # Krissbert Entity Linking & Level 2 Node Creation
         level2_nodes = []
         ref_to_edges = []
         
-        if self.biosyn:
+        if self.entity_linker:
             if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: BioSyn & Level 2"):
-                    biosyn_hints, level2_nodes, ref_to_edges = self._process_biosyn_level2(entities_list)
+                with Timer(self.time_logger, file_name, "Edge: Krissbert Linking"):
+                    level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
             else:
-                biosyn_hints, level2_nodes, ref_to_edges = self._process_biosyn_level2(entities_list)
+                level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
 
         prompt = (
             EDGE_EXTRACTION_PROMPT
             .replace("[INPUT TEXT]", text)
-            .replace("[ENTITIES LIST]", json.dumps(nodes_dict, ensure_ascii=False))
-            .replace("[UMLS NODES]", json.dumps(umls_features.get("nodes", []), ensure_ascii=False))
-            .replace("[UMLS EDGES]", json.dumps(umls_features.get("edges", []), ensure_ascii=False))
-            .replace("[BIOSYN HINTS]", json.dumps(biosyn_hints, ensure_ascii=False))
+            .replace("[ENTITIES LIST]", json.dumps(prompt_nodes_dict, ensure_ascii=False))
         )
 
         #save prompt to check 
@@ -192,96 +179,92 @@ class EdgeExtractor:
             # Still return REF_TO edges if any
             return ExtractedEdges(edges=ref_to_edges), level2_nodes
 
-    def _process_biosyn_level2(self, entities: List[Dict]) -> Tuple[List[Dict], List[Dict], List[Edge]]:
-        hints = []
+    def _process_krissbert_level2(self, entities: List[Dict]) -> Tuple[List[Dict], List[Edge]]:
         level2_nodes = []
         ref_to_edges = []
         
-        # Step 1: Collect all BioSyn predictions and CUIs
-        all_predictions = []  # List of (entity, predictions)
+        # Prepare data for Krissbert
+        # Krissbert expects: [{'mention': ..., 'context_left': ..., 'context_right': ...}]
+        # We use Entity.name as 'mention' for linking, but we should probably use the actual mention text if available.
+        # The user said: "mention trong krissbert là entity name ở bước node extraction" -> So use entity['name'] as mention.
+        # But wait, context extraction relied on entity['mention'] (the span).
+        # Let's use entity['name'] as the 'mention' field for Krissbert input as requested, 
+        # but we need to pass the contexts we extracted.
+        
+        krissbert_input = []
+        valid_entities = []
         
         for entity in entities:
-            mention = entity.get("mention") or entity.get("name")
-            if not mention:
+            name = entity.get("name")
+            if not name:
                 continue
             
-            try:
-                result_json = self._cached_biosyn_predict(mention)
-                result = json.loads(result_json)
-                predictions = result.get("predictions", [])
+            krissbert_input.append({
+                "mention": name, # User instruction: mention is entity name
+                "context_left": entity.get("context_left", ""),
+                "context_right": entity.get("context_right", "")
+            })
+            valid_entities.append(entity)
+            
+        if not krissbert_input:
+            return [], []
+            
+        try:
+            # Get top 5 candidates
+            results = self.entity_linker.predict(krissbert_input, top_k=5)
+            
+            for i, res in enumerate(results):
+                original_entity = valid_entities[i]
+                candidates = res.get("candidates", [])
                 
-                if not predictions:
-                    continue
-                    
-                # Hints for LLM (only top 1)
-                top_pred = predictions[0]
-                hints.append({
-                    "entity": mention,
-                    "biosyn_cui": top_pred.get("id"),
-                    "biosyn_name": top_pred.get("name")
-                })
+                # Filter by threshold
+                candidates = [c for c in candidates if c.get('score', 0) >= 0.85]
                 
-                # Store entity and its top 3 predictions
-                all_predictions.append((entity, predictions[:3]))
+                # We want to create Level 2 nodes from these candidates.
+                # User example: {"cui":"C1436751","name":"...","definition":"...","icd":null,"semantic_types":[...]}
+                # And create REF_TO edges.
+                
+                # Let's take the top 1 candidate for the primary REF_TO edge, 
+                # or maybe create edges to all top 5? Usually linking is to the best match.
+                # The user said "Tham khảo file... để biết cách query lấy top 5 node liên quan".
+                # But for the graph, usually we link to the disambiguated entity.
+                # Let's link to the top 1 for now to avoid explosion, or maybe top 3?
+                # Let's stick to Top 1 for the "REF_TO" edge to keep the graph clean, 
+                # but we can store others if needed. For now, Top 1.
+                
+                if candidates:
+                    top_cand = candidates[0]
                     
-            except Exception as e:
-                logger.warning(f"BioSyn processing failed for '{mention}': {e}")
-        
-        # Step 2: Batch query definitions and ICD codes
-        def clean_id(mid):
-            if mid and "|" in mid:
-                return mid.split("|")[-1]
-            return mid
+                    # Create Level 2 Node
+                    l2_node = {
+                        "cui": top_cand.get("cui"),
+                        "name": top_cand.get("name"),
+                        "definition": top_cand.get("definition"),
+                        "icd": top_cand.get("icd"),
+                        "semantic_types": [], # Krissbert result might not have this, need to check payload
+                        "level": "Level 2"
+                    }
+                    
+                    # If semantic_types is in payload (it wasn't in the view_file of run_entity_linking, but maybe in Qdrant)
+                    # The user example showed "semantic_types". 
+                    # In run_entity_linking.py, payload fields were: cui, name, definition, icd.
+                    # We might need to add semantic_types to run_entity_linking.py if it's in Qdrant payload.
+                    # For now, let's leave it empty or try to get it if available.
+                    if "semantic_types" in top_cand:
+                         l2_node["semantic_types"] = top_cand["semantic_types"]
+                    
+                    level2_nodes.append(l2_node)
+                    
+                    # Create REF_TO edge
+                    ref_edge = Edge(
+                        source=original_entity.get("name"),
+                        relation="REF_TO",
+                        target=top_cand.get("name"),
+                        evidence=f"Krissbert Entity Linking (Score: {top_cand.get('score', 0):.4f})"
+                    )
+                    ref_to_edges.append(ref_edge)
 
-        all_mesh_ids = [clean_id(pred.get("id")) for _, preds in all_predictions for pred in preds]
-        
-        icd_map = {}
-        def_map = {}
-        mesh_to_cui_map = {}
-        
-        if all_mesh_ids:
-            with UMLSEntityLookup("data/umls.duckdb") as lookup:
-                # Map MeSH IDs to CUIs
-                mesh_to_cui_map = lookup.map_mesh_ids_to_cuis(all_mesh_ids)
-                
-                # Get unique CUIs
-                all_cuis = list(set(mesh_to_cui_map.values()))
-                
-                if all_cuis:
-                    icd_map = lookup.get_icd_codes_batch(all_cuis)
-                    def_map = lookup.get_definitions_batch(all_cuis)
-        
-        # Step 3: Create Level 2 nodes and REF_TO edges using batch results
-        for entity, predictions in all_predictions:
-            for pred in predictions:
-                mesh_id = clean_id(pred.get("id"))
-                name = pred.get("name")
-                
-                # Get mapped CUI
-                cui = mesh_to_cui_map.get(mesh_id)
-                
-                # Lookup from batch results using CUI
-                definition = def_map.get(cui, "") if cui else ""
-                icd = icd_map.get(cui, "") if cui else ""
-                
-                # Create Level 2 Node
-                l2_node = {
-                    "name": name,
-                    "semantic_type": "Level 2",
-                    "definition": definition,
-                    "icd": icd,
-                    "cui": cui if cui else mesh_id, # Prefer UMLS CUI, fallback to MeSH ID
-                    "level": "Level 2"
-                }
-                level2_nodes.append(l2_node)
-                
-                # Create REF_TO edge
-                ref_edge = Edge(
-                    source=entity.get("name"),
-                    relation="REF_TO",
-                    target=name,
-                    evidence="BioSyn Entity Linking"
-                )
-                ref_to_edges.append(ref_edge)
-                
-        return hints, level2_nodes, ref_to_edges
+        except Exception as e:
+            logger.error(f"Krissbert processing failed: {e}")
+            
+        return level2_nodes, ref_to_edges

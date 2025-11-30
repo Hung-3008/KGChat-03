@@ -253,7 +253,7 @@ def generate_vectors(
         batch = [dataset[i] for i in range(batch_start, min(n, batch_start + batch_size))]
         batch_token_tensors = [m.to_tensor(tokenizer, max_length) for m in batch]
 
-        ids_batch = torch.stack(batch_token_tensors, dim=0).cuda()
+        ids_batch = torch.stack(batch_token_tensors, dim=0).to(encoder.device)
         seg_batch = torch.zeros_like(ids_batch)
         attn_mask = (ids_batch != tokenizer.pad_token_id)
 

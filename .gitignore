@@ -92,6 +92,7 @@ scripts/*
 !scripts/test_level2_nodes.py
 !scripts/debug_node_extractor.py
 !scripts/test_schema_fix.py
+!scripts/test_generate_prototypes.py
 *.ipynb
 commands.ipynb
 .github/*
