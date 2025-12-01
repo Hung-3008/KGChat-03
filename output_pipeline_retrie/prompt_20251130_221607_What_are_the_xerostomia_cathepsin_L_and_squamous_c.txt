@@ -1,0 +1,312 @@
+================================================================================
+PROMPT READY FOR LLM (Copy phần dưới để sử dụng)
+================================================================================
+
+---Role---
+
+You are a helpful assistant responding to user query about Knowledge Base provided below.
+
+---Goal---
+
+Generate a concise response based on Knowledge Base and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Knowledge Base, and incorporating general knowledge relevant to the Knowledge Base. Do not include information not provided by Knowledge Base.
+
+---Conversation History---
+(No previous conversation)
+
+---User Query---
+What are the xerostomia, cathepsin L and squamous cell carcinoma?
+
+---Knowledge Base---
+
+# KEY CONCEPTS
+
+## PHENOMENON_OR_PROCESSS
+* **skewed cell division distributions in E. coli**
+* **No16966**
+
+## PHARMACOLOGIC_SUBSTANCES
+* **C21/M024 (D)**
+
+## SIGN_OR_SYMPTOMS
+* **Displacement of apical portions of root**
+
+## CHEMICAL_VIEWED_STRUCTURALLYS
+* **ITIH4658–688**
+
+## BACTERIUMS
+* **Lactobacillus Casei LR1**
+
+## MANUFACTURED_OBJECTS
+* **glass potter Elvehjem homogenizer**
+
+## MEDICAL_DEVICES
+* **thermocoagulation**
+* **ABI 7900HT real-time PCR machine**
+
+## EUKARYOTES
+* **H1299 CELLS**
+
+## PHYSIOLOGIC_FUNCTIONS
+* **electroclinical localization**
+* **triglyceride hydrolase activity**
+
+## ELEMENT_ION_OR_ISOTOPES
+* **99mTc**
+
+## LABORATORY_PROCEDURES
+* **semi-degenerate PCR**
+* **Decayed, missing and filled surfaces index for permanent teeth**
+* **Decayed, missing and filled surfaces index for deciduous teeth**
+
+## FULLY_FORMED_ANATOMICAL_STRUCTURES
+* **Endodontically treated teeth**
+
+## BIOLOGICALLY_ACTIVE_SUBSTANCES
+* **osteogenic differentiation medium**
+
+## HEALTH_CARE_RELATED_ORGANIZATIONS
+* **Pusan National University Hospital**
+
+## DISEASE_OR_SYNDROMES
+* **muscular dystrophy**
+
+# RELATIONSHIPS
+
+## REF_TO
+* skewed cell division distributions in E. coli → e coli infection
+* skewed cell division distributions in E. coli → infections e coli
+* skewed cell division distributions in E. coli → infection e coli
+* C21/M024 (D) → ibd21
+* C21/M024 (D) → iddm21
+* C21/M024 (D) → cyp21 deficiency
+* No16966 → eds6b formerly
+* No16966 → eds6
+* No16966 → eds6a formerly
+* Displacement of apical portions of root → root resorptions
+* Displacement of apical portions of root → mobility tooth
+* Displacement of apical portions of root → root resorption
+* ITIH4658–688 → gegenhalten
+* ITIH4658–688 → itai itai
+* ITIH4658–688 → lou gehrig disease
+* Lactobacillus Casei LR1 → lactose intolerance
+* Lactobacillus Casei LR1 → lca1
+* Lactobacillus Casei LR1 → lactocele
+* glass potter Elvehjem homogenizer → poisonings ergot
+* glass potter Elvehjem homogenizer → syndrome irvine gass
+* glass potter Elvehjem homogenizer → syndrome watson miller
+* thermocoagulation → hypercoagulability
+* thermocoagulation → heat collapse
+* thermocoagulation → collapse heat
+* H1299 CELLS → dyt9
+* H1299 CELLS → imd9
+* H1299 CELLS → xp9
+* electroclinical localization → localization related epilepsy
+* electroclinical localization → electrocutions accidental
+* electroclinical localization → accidental electrocutions
+* 99mTc → scan2
+* 99mTc → scan1
+* 99mTc → mtc
+* semi-degenerate PCR → dcr included
+* semi-degenerate PCR → ncr
+* semi-degenerate PCR → dpr
+* ABI 7900HT real-time PCR machine → charcot marie disease
+* ABI 7900HT real-time PCR machine → tumor buschke l 246 wenstein
+* ABI 7900HT real-time PCR machine → kiaa1901
+* Endodontically treated teeth → endodontically treated teeth
+* Endodontically treated teeth → endodontically treated tooth
+* Endodontically treated teeth → teeth endodontically treated
+* triglyceride hydrolase activity → hypertriglyceridemias
+* triglyceride hydrolase activity → hypertriglyceridemia familial
+* triglyceride hydrolase activity → cholesterol ester hydrolase deficiency
+* osteogenic differentiation medium → fibrochondrogenesis
+* osteogenic differentiation medium → osteodermia
+* osteogenic differentiation medium → sarcoma osteogenic
+* Pusan National University Hospital → nguyen syndrome
+* Pusan National University Hospital → san luis valley syndrome
+* Pusan National University Hospital → tang hsi ryu syndrome
+* muscular dystrophy → muscle dystrophy
+* muscular dystrophy → muscular dystrophies
+* Decayed, missing and filled surfaces index for permanent teeth → caries dental
+* Decayed, missing and filled surfaces index for permanent teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for permanent teeth → dental decay
+* Decayed, missing and filled surfaces index for deciduous teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for deciduous teeth → tooth disease
+* Decayed, missing and filled surfaces index for deciduous teeth → dental decay
+
+## ASSOCIATED_WITH
+* ITIH4658–688 → ovarian cancer
+* ITIH4658–688 → colorectal cancer
+
+## TREATS
+* ITIH4658–688 → breast cancer
+
+## SIDE_EFFECT_OF
+* thermocoagulation → tumor
+
+# DETAILED INFORMATION
+
+## SKEWED CELL DIVISION DISTRIBUTIONS IN E. COLI (Phenomenon_or_Process)
+
+### Related Concepts:
+* **e coli infection** (CUI: C0014836) (Level 2): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infections e coli** (CUI: C0014836) (Level 2): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infection e coli** (CUI: C0014836) (Level 2): Infections with bacteria of the species ESCHERICHIA COLI.
+
+## C21/M024 (D) (Pharmacologic_Substance)
+
+### Related Concepts:
+* **ibd21** (CUI: 612354) (Level 2)
+* **iddm21** (CUI: C2675865) (Level 2)
+* **cyp21 deficiency** (CUI: 201910) (Level 2)
+
+## NO16966 (Phenomenon_or_Process)
+
+### Related Concepts:
+* **eds6b formerly** (CUI: 601776) (Level 2)
+* **eds6** (CUI: 225400) (Level 2)
+* **eds6a formerly** (CUI: 225400) (Level 2)
+
+## DISPLACEMENT OF APICAL PORTIONS OF ROOT (Sign_or_Symptom)
+
+### Related Concepts:
+* **root resorptions** (CUI: C0035851) (Level 2): Resorption in which cementum or dentin is lost from the root of a tooth owing to cementoclastic or osteoclastic activity in conditions such as trauma of occlusion or neoplasms. (Dorland, 27th ed)
+* **mobility tooth** (CUI: C0040445) (Level 2): Horizontal and, to a lesser degree, axial movement of a tooth in response to normal forces, as in occlusion. It refers also to the movability of a tooth resulting from loss of all or a portion of its attachment and supportive apparatus, as seen in periodontitis, occlusal trauma, and periodontosis...
+* **root resorption** (CUI: C0035851) (Level 2): Resorption in which cementum or dentin is lost from the root of a tooth owing to cementoclastic or osteoclastic activity in conditions such as trauma of occlusion or neoplasms. (Dorland, 27th ed)
+
+## ITIH4658–688 (Chemical_Viewed_Structurally)
+
+### Related Concepts:
+* **ovarian cancer** (CUI: C0919267) (Level 2): Tumors or cancer of the OVARY. These neoplasms can be benign or malignant. They are classified according to the tissue of origin, such as the surface EPITHELIUM, the stromal endocrine cells, and the totipotent GERM CELLS.
+* **gegenhalten** (CUI: C0239325) (Level 2)
+* **itai itai** (CUI: C0006635) (Level 2): Poisoning occurring after exposure to cadmium compounds or fumes. It may cause gastrointestinal syndromes, anemia, or pneumonitis.
+* **breast cancer** (CUI: C4704874) (Level 2): Cancer of the human MAMMARY GLAND.
+* **colorectal cancer** (CUI: C0009404) (Level 2): Tumors or cancer of the COLON or the RECTUM or both. Risk factors for colorectal cancer include chronic ULCERATIVE COLITIS; FAMILIAL POLYPOSIS COLI; exposure to ASBESTOS; and irradiation of the CERVIX UTERI.
+* **lou gehrig disease** (CUI: C0393554) (Level 2)
+
+## LACTOBACILLUS CASEI LR1 (Bacterium)
+
+### Related Concepts:
+* **lactose intolerance** (CUI: C0022951) (Level 2): The condition resulting from the absence or deficiency of LACTASE in the MUCOSA cells of the GASTROINTESTINAL TRACT, and the inability to break down LACTOSE in milk for ABSORPTION. Bacterial fermentation of the unabsorbed lactose leads to symptoms that range from a mild indigestion (DYSPEPSIA) to...
+* **lca1** (CUI: 204000) (Level 2)
+* **lactocele** (CUI: C0152243) (Level 2): Single or multiple, milk-containing nodules in the breast. It is caused by obstruction of the breast ducts during lactation. Needle aspiration of the milk is the treatment of choice.
+
+## GLASS POTTER ELVEHJEM HOMOGENIZER (Manufactured_Object)
+
+### Related Concepts:
+* **poisonings ergot** (CUI: C0014714) (Level 2): Poisoning caused by ingesting ergotized grain or by the misdirected or excessive use of ergot as a medicine.
+* **syndrome irvine gass** (CUI: C0271178) (Level 2)
+* **syndrome watson miller** (CUI: C2930797) (Level 2)
+
+## THERMOCOAGULATION (Medical_Device)
+
+### Related Concepts:
+* **hypercoagulability** (CUI: 188050) (Level 2)
+* **tumor** (CUI: C0086692) (Level 2): A neoplasm characterized by the absence of atypical or malignant cytological and architectural features, and absence of invasive features or metastatic potential.
+* **heat collapse** (CUI: C0018839) (Level 2): A clinical syndrome caused by heat stress, such as over-exertion in a hot environment or excessive exposure to sun. It is characterized by SWEATING, water (volume) depletion, salt depletion, cool clammy skin, NAUSEA, and HEADACHE.
+* **collapse heat** (CUI: C0018839) (Level 2): A clinical syndrome caused by heat stress, such as over-exertion in a hot environment or excessive exposure to sun. It is characterized by SWEATING, water (volume) depletion, salt depletion, cool clammy skin, NAUSEA, and HEADACHE.
+
+## H1299 CELLS (Eukaryote)
+
+### Related Concepts:
+* **dyt9** (CUI: 601042) (Level 2)
+* **imd9** (CUI: C2748568) (Level 2): Combined immunodeficiency (CID) due to &lt;i&gt;ORAI1&lt;/i&gt; deficiency is a form of CID due to Calcium release activated Ca2+ (CRAC) channel dysfunction (see this term) characterized by recurrent infections, congenital myopathy, ectodermal dysplasia and anhydrosis.
+* **xp9** (CUI: C3501864) (Level 2)
+
+## ELECTROCLINICAL LOCALIZATION (Physiologic_Function)
+
+### Related Concepts:
+* **localization related epilepsy** (CUI: C0393679) (Level 2): A type of focal epilepsy where all the seizures originate within the amygdalo-hippocampal area of the temporal lobe.
+* **electrocutions accidental** (CUI: C1556061) (Level 2): Injuries caused by electric currents. The concept excludes electric burns (BURNS, ELECTRIC), but includes accidental electrocution and electric shock.
+* **accidental electrocutions** (CUI: C1556061) (Level 2): Injuries caused by electric currents. The concept excludes electric burns (BURNS, ELECTRIC), but includes accidental electrocution and electric shock.
+
+## 99MTC (Element_Ion_or_Isotope)
+
+### Related Concepts:
+* **scan2** (CUI: C1853761) (Level 2): An autosomal recessive condition caused by mutation(s) in the SETX gene, encoding probable helicase senataxin. It is characterized by juvenile onset progressive cerebellar ataxia, axonal sensorimotor peripheral neuropathy, and increased concentrations of serum alpha-fetoprotein. Oculomotor apraxi...
+* **scan1** (CUI: C1846574) (Level 2)
+* **mtc** (CUI: 155240) (Level 2)
+
+## SEMI-DEGENERATE PCR (Laboratory_Procedure)
+
+### Related Concepts:
+* **dcr included** (CUI: 190685) (Level 2)
+* **ncr** (CUI: 162820) (Level 2)
+* **dpr** (CUI: 125595) (Level 2)
+
+## ABI 7900HT REAL-TIME PCR MACHINE (Medical_Device)
+
+### Related Concepts:
+* **charcot marie disease** (CUI: C0007959) (Level 2): A hereditary motor and sensory neuropathy transmitted most often as an autosomal dominant trait and characterized by progressive distal wasting and loss of reflexes in the muscles of the legs (and occasionally involving the arms). Onset is usually in the second to fourth decade of life. This cond...
+* **tumor buschke l 246 wenstein** (CUI: C0276264) (Level 2): Exophytic tumor of the anogenital region associated with HPV infections. It becomes a large cauliflower-like, hyperkeratotic, verrucous mass that is locally destructive with little atypical cells. Histologically, tumor cells are broad rete peg structures that tend to invade deeper than CONDYLOMAT...
+* **kiaa1901** (CUI: 604588) (Level 2)
+
+## ENDODONTICALLY TREATED TEETH (Fully_Formed_Anatomical_Structure)
+
+### Related Concepts:
+* **endodontically treated teeth** (CUI: C0302535) (Level 2): A tooth from which the dental pulp has been removed or is necrotic. (Boucher, Clinical Dental Terminology, 4th ed)
+* **endodontically treated tooth** (CUI: C0376699) (Level 2)
+* **teeth endodontically treated** (CUI: C0302535) (Level 2): A tooth from which the dental pulp has been removed or is necrotic. (Boucher, Clinical Dental Terminology, 4th ed)
+
+## TRIGLYCERIDE HYDROLASE ACTIVITY (Physiologic_Function)
+
+### Related Concepts:
+* **hypertriglyceridemias** (CUI: C0020557) (Level 2): A condition of elevated levels of TRIGLYCERIDES in the blood.
+* **hypertriglyceridemia familial** (CUI: C0020480) (Level 2): A hypertriglyceridemia disorder, often with autosomal dominant inheritance. It is characterized by the persistent elevations of plasma TRIGLYCERIDES, endogenously synthesized and contained predominantly in VERY-LOW-DENSITY LIPOPROTEINS (pre-beta lipoproteins). In contrast, the plasma CHOLESTEROL ...
+* **cholesterol ester hydrolase deficiency** (CUI: C531854) (Level 2)
+
+## OSTEOGENIC DIFFERENTIATION MEDIUM (Biologically_Active_Substance)
+
+### Related Concepts:
+* **fibrochondrogenesis** (CUI: C0265282) (Level 2): Fibrochondrogenesis is a rare neonatally lethal rhizomelic chondrodysplasia. The face is distinctive with characteristics of protuberant eyes, flat midface, flat small nose with anteverted nares and a small mouth with long upper lip. Cleft palate, micrognathia and bifid tongue can occur. The limb...
+* **osteodermia** (CUI: 166350) (Level 2)
+* **sarcoma osteogenic** (CUI: 259500) (Level 2)
+
+## PUSAN NATIONAL UNIVERSITY HOSPITAL (Health_Care_Related_Organization)
+
+### Related Concepts:
+* **nguyen syndrome** (CUI: C1864823) (Level 2)
+* **san luis valley syndrome** (CUI: C0795822) (Level 2): Recombinant chromosome 8 with developmental delay, minor facial anomalies, eye abnormalities, high frequency otitis media and hearing loss, congenital heart disease, and genitourinary anomalies. All thus far observed cases have been in patients of Hispanic origin in south-western United States.
+* **tang hsi ryu syndrome** (CUI: C2931363) (Level 2)
+
+## MUSCULAR DYSTROPHY (Disease_or_Syndrome)
+
+### Related Concepts:
+* **muscle dystrophy** (CUI: C0026850) (Level 2): A heterogeneous group of inherited MYOPATHIES, characterized by wasting and weakness of the SKELETAL MUSCLE. They are categorized by the sites of MUSCLE WEAKNESS; AGE OF ONSET; and INHERITANCE PATTERNS.
+* **muscular dystrophies** (CUI: C0026850) (Level 2): A heterogeneous group of inherited MYOPATHIES, characterized by wasting and weakness of the SKELETAL MUSCLE. They are categorized by the sites of MUSCLE WEAKNESS; AGE OF ONSET; and INHERITANCE PATTERNS.
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR PERMANENT TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **caries dental** (CUI: C1707305) (Level 2): Tooth decay that has invaded the dentin, creating dentin that is partially demineralized and containing mineral crystals in the tubules.
+* **mouth and tooth diseases** (CUI: C1704330) (Level 2): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **dental decay** (CUI: C0011334) (Level 2): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR DECIDUOUS TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **mouth and tooth diseases** (CUI: C1704330) (Level 2): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **tooth disease** (CUI: C0040435) (Level 2): Diseases involving the TEETH.
+* **dental decay** (CUI: C0011334) (Level 2): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+
+---Response Rules---
+
+- Target format and length: comprehensive and detailed
+- Use markdown formatting with appropriate section headings
+- Please respond in the same language as the user's question
+- Ensure the response maintains continuity with the conversation history
+- List up to 5 most important reference sources at the end under "References" section
+- If you don't know the answer, just say so
+- Do not make anything up. Do not include information not provided by the Knowledge Base
+
+================================================================================
+METADATA (For reference only)
+================================================================================
+Timestamp: 2025-11-30 22:16:07
+Intent: HEALTHCARE_RELATED
+High-level keywords: Medical conditions, Biological molecules, Cancer types, Health terminology
+Low-level keywords: Xerostomia, Cathepsin L, Squamous cell carcinoma
+Retrieval Statistics:
+  - Level 1 nodes: 20
+  - Level 2 nodes: 61
+  - Relationships: 63

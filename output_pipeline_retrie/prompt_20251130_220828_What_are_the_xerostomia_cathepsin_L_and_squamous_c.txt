@@ -1,0 +1,310 @@
+================================================================================
+PROMPT READY FOR LLM (Copy phần dưới để sử dụng)
+================================================================================
+
+---Role---
+
+You are a helpful assistant responding to user query about Knowledge Base provided below.
+
+---Goal---
+
+Generate a concise response based on Knowledge Base and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Knowledge Base, and incorporating general knowledge relevant to the Knowledge Base. Do not include information not provided by Knowledge Base.
+
+---Conversation History---
+(No previous conversation)
+
+---User Query---
+What are the xerostomia, cathepsin L and squamous cell carcinoma?
+
+---Knowledge Base---
+
+# KEY CONCEPTS
+
+## PHENOMENON_OR_PROCESSS
+* **skewed cell division distributions in E. coli**
+* **No16966**
+
+## PHARMACOLOGIC_SUBSTANCES
+* **C21/M024 (D)**
+
+## SIGN_OR_SYMPTOMS
+* **Displacement of apical portions of root**
+
+## BACTERIUMS
+* **Lactobacillus Casei LR1**
+
+## MANUFACTURED_OBJECTS
+* **glass potter Elvehjem homogenizer**
+* **cDNA Reverse Transcription Kit**
+* **diode laser K81S09F**
+
+## BIOLOGICALLY_ACTIVE_SUBSTANCES
+* **CpGenome Universal Methylated DNA**
+
+## CELL_OR_MOLECULAR_DYSFUNCTIONS
+* **hypermethylation of the promoter region**
+
+## BODY_LOCATION_OR_REGIONS
+* **Vertical root fractures**
+
+## NATURAL_PHENOMENON_OR_PROCESSS
+* **Cold_Temperatures**
+
+## CHEMICAL_VIEWED_STRUCTURALLYS
+* **ITIH4658–688**
+
+## PHYSIOLOGIC_FUNCTIONS
+* **triglyceride hydrolase activity**
+
+## HEALTH_CARE_RELATED_ORGANIZATIONS
+* **Pusan National University Hospital**
+
+## DISEASE_OR_SYNDROMES
+* **muscular dystrophy**
+
+## LABORATORY_PROCEDURES
+* **Decayed, missing and filled surfaces index for permanent teeth**
+* **Decayed, missing and filled surfaces index for deciduous teeth**
+
+## ACQUIRED_ABNORMALITYS
+* **skin tenderness**
+
+## S
+* **The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon**
+
+# RELATIONSHIPS
+
+## REF_TO
+* skewed cell division distributions in E. coli → e coli infection
+* skewed cell division distributions in E. coli → infections e coli
+* skewed cell division distributions in E. coli → infection e coli
+* C21/M024 (D) → ibd21
+* C21/M024 (D) → iddm21
+* C21/M024 (D) → cyp21 deficiency
+* No16966 → eds6b formerly
+* No16966 → eds6
+* No16966 → eds6a formerly
+* Displacement of apical portions of root → root resorptions
+* Displacement of apical portions of root → mobility tooth
+* Displacement of apical portions of root → root resorption
+* Lactobacillus Casei LR1 → lactose intolerance
+* Lactobacillus Casei LR1 → lca1
+* Lactobacillus Casei LR1 → lactocele
+* glass potter Elvehjem homogenizer → poisonings ergot
+* glass potter Elvehjem homogenizer → syndrome irvine gass
+* glass potter Elvehjem homogenizer → syndrome watson miller
+* CpGenome Universal Methylated DNA → dna repair deficiencies
+* CpGenome Universal Methylated DNA → dmda
+* CpGenome Universal Methylated DNA → dhmnvp
+* hypermethylation of the promoter region → genomic instability
+* hypermethylation of the promoter region → hypermelanoses
+* hypermethylation of the promoter region → hyperhistidinemia
+* Vertical root fractures → depressed skull fractures
+* Vertical root fractures → tooth fractures
+* Vertical root fractures → tooth fracture
+* Cold_Temperatures → cold sores
+* Cold_Temperatures → cold sore
+* Cold_Temperatures → chills
+* cDNA Reverse Transcription Kit → rhdns1
+* cDNA Reverse Transcription Kit → cds
+* cDNA Reverse Transcription Kit → cdl3a
+* ITIH4658–688 → gegenhalten
+* ITIH4658–688 → itai itai
+* ITIH4658–688 → lou gehrig disease
+* triglyceride hydrolase activity → hypertriglyceridemias
+* triglyceride hydrolase activity → hypertriglyceridemia familial
+* triglyceride hydrolase activity → cholesterol ester hydrolase deficiency
+* Pusan National University Hospital → nguyen syndrome
+* Pusan National University Hospital → san luis valley syndrome
+* Pusan National University Hospital → tang hsi ryu syndrome
+* muscular dystrophy → muscle dystrophy
+* muscular dystrophy → muscular dystrophies
+* Decayed, missing and filled surfaces index for permanent teeth → caries dental
+* Decayed, missing and filled surfaces index for permanent teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for permanent teeth → dental decay
+* Decayed, missing and filled surfaces index for deciduous teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for deciduous teeth → tooth disease
+* Decayed, missing and filled surfaces index for deciduous teeth → dental decay
+* skin tenderness → tenderness muscle
+* skin tenderness → muscle soreness
+* skin tenderness → muscle tenderness
+* The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon → charcot marie tooth disease type 2d
+* The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon → charcot marie tooth disease type i
+* The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon → charcot marie tooth disease dominant intermediate a
+* diode laser K81S09F → burn electric
+* diode laser K81S09F → x ray nk sensitivity
+* diode laser K81S09F → cmd1z
+
+## ASSOCIATED_WITH
+* ITIH4658–688 → ovarian cancer
+* ITIH4658–688 → colorectal cancer
+
+## TREATS
+* ITIH4658–688 → breast cancer
+
+# DETAILED INFORMATION
+
+## SKEWED CELL DIVISION DISTRIBUTIONS IN E. COLI (Phenomenon_or_Process)
+
+### Related Concepts:
+* **e coli infection** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infections e coli** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infection e coli** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+
+## C21/M024 (D) (Pharmacologic_Substance)
+
+### Related Concepts:
+* **ibd21** (CUI: 612354) (CONCEPT)
+* **iddm21** (CUI: C2675865) (CONCEPT)
+* **cyp21 deficiency** (CUI: 201910) (CONCEPT)
+
+## NO16966 (Phenomenon_or_Process)
+
+### Related Concepts:
+* **eds6b formerly** (CUI: 601776) (CONCEPT)
+* **eds6** (CUI: 225400) (CONCEPT)
+* **eds6a formerly** (CUI: 225400) (CONCEPT)
+
+## DISPLACEMENT OF APICAL PORTIONS OF ROOT (Sign_or_Symptom)
+
+### Related Concepts:
+* **root resorptions** (CUI: C0035851) (CONCEPT): Resorption in which cementum or dentin is lost from the root of a tooth owing to cementoclastic or osteoclastic activity in conditions such as trauma of occlusion or neoplasms. (Dorland, 27th ed)
+* **mobility tooth** (CUI: C0040445) (CONCEPT): Horizontal and, to a lesser degree, axial movement of a tooth in response to normal forces, as in occlusion. It refers also to the movability of a tooth resulting from loss of all or a portion of its attachment and supportive apparatus, as seen in periodontitis, occlusal trauma, and periodontosis...
+* **root resorption** (CUI: C0035851) (CONCEPT): Resorption in which cementum or dentin is lost from the root of a tooth owing to cementoclastic or osteoclastic activity in conditions such as trauma of occlusion or neoplasms. (Dorland, 27th ed)
+
+## LACTOBACILLUS CASEI LR1 (Bacterium)
+
+### Related Concepts:
+* **lactose intolerance** (CUI: C0022951) (CONCEPT): The condition resulting from the absence or deficiency of LACTASE in the MUCOSA cells of the GASTROINTESTINAL TRACT, and the inability to break down LACTOSE in milk for ABSORPTION. Bacterial fermentation of the unabsorbed lactose leads to symptoms that range from a mild indigestion (DYSPEPSIA) to...
+* **lca1** (CUI: 204000) (CONCEPT)
+* **lactocele** (CUI: C0152243) (CONCEPT): Single or multiple, milk-containing nodules in the breast. It is caused by obstruction of the breast ducts during lactation. Needle aspiration of the milk is the treatment of choice.
+
+## GLASS POTTER ELVEHJEM HOMOGENIZER (Manufactured_Object)
+
+### Related Concepts:
+* **poisonings ergot** (CUI: C0014714) (CONCEPT): Poisoning caused by ingesting ergotized grain or by the misdirected or excessive use of ergot as a medicine.
+* **syndrome irvine gass** (CUI: C0271178) (CONCEPT)
+* **syndrome watson miller** (CUI: C2930797) (CONCEPT)
+
+## CPGENOME UNIVERSAL METHYLATED DNA (Biologically_Active_Substance)
+
+### Related Concepts:
+* **dna repair deficiencies** (CUI: C0268134) (CONCEPT)
+* **dmda** (CUI: C0410173) (CONCEPT): A subtype of autosomal recessive limb-girdle muscular dystrophy characterized by a childhood onset of progressive shoulder and pelvic girdle muscle weakness and atrophy frequently associated with calf hypertrophy, diaphragmatic weakness, and/or variable cardiac abnormalities. Mild to moderate ele...
+* **dhmnvp** (CUI: 158580) (CONCEPT)
+
+## HYPERMETHYLATION OF THE PROMOTER REGION (Cell_or_Molecular_Dysfunction)
+
+### Related Concepts:
+* **genomic instability** (CUI: C0919532) (CONCEPT): An increased tendency of the GENOME to acquire MUTATIONS when various processes involved in maintaining and replicating the genome are dysfunctional.
+* **hypermelanoses** (CUI: C0333616) (CONCEPT)
+* **hyperhistidinemia** (CUI: 235800) (CONCEPT)
+
+## VERTICAL ROOT FRACTURES (Body_Location_or_Region)
+
+### Related Concepts:
+* **depressed skull fractures** (CUI: C0347766) (CONCEPT): A skull fracture characterized by inward depression of a fragment or section of cranial bone, often compressing the underlying dura mater and brain. Depressed cranial fractures which feature open skin wounds that communicate with skull fragments are referred to as compound depressed skull fractures.
+* **tooth fractures** (CUI: C0040441) (CONCEPT): Break or rupture of a tooth or tooth root.
+* **tooth fracture** (CUI: C0040441) (CONCEPT): Break or rupture of a tooth or tooth root.
+
+## COLD_TEMPERATURES (Natural_Phenomenon_or_Process)
+
+### Related Concepts:
+* **cold sores** (CUI: C0019345) (CONCEPT): Herpes simplex, caused by type 1 virus, primarily spread by oral secretions and usually occurring as a concomitant of fever. It may also develop in the absence of fever or prior illness. It commonly involves the facial region, especially the lips and the nares. (Dorland, 27th ed.)
+* **cold sore** (CUI: C0019345) (CONCEPT): Herpes simplex, caused by type 1 virus, primarily spread by oral secretions and usually occurring as a concomitant of fever. It may also develop in the absence of fever or prior illness. It commonly involves the facial region, especially the lips and the nares. (Dorland, 27th ed.)
+* **chills** (CUI: C0085593) (CONCEPT): The sudden sensation of being cold. It may be accompanied by SHIVERING.
+
+## CDNA REVERSE TRANSCRIPTION KIT (Manufactured_Object)
+
+### Related Concepts:
+* **rhdns1** (CUI: 610805) (CONCEPT)
+* **cds** (CUI: 275630) (CONCEPT)
+* **cdl3a** (CUI: 608471) (CONCEPT)
+
+## ITIH4658–688 (Chemical_Viewed_Structurally)
+
+### Related Concepts:
+* **ovarian cancer** (CUI: C0919267) (CONCEPT): Tumors or cancer of the OVARY. These neoplasms can be benign or malignant. They are classified according to the tissue of origin, such as the surface EPITHELIUM, the stromal endocrine cells, and the totipotent GERM CELLS.
+* **gegenhalten** (CUI: C0239325) (CONCEPT)
+* **itai itai** (CUI: C0006635) (CONCEPT): Poisoning occurring after exposure to cadmium compounds or fumes. It may cause gastrointestinal syndromes, anemia, or pneumonitis.
+* **breast cancer** (CUI: C4704874) (CONCEPT): Cancer of the human MAMMARY GLAND.
+* **colorectal cancer** (CUI: C0009404) (CONCEPT): Tumors or cancer of the COLON or the RECTUM or both. Risk factors for colorectal cancer include chronic ULCERATIVE COLITIS; FAMILIAL POLYPOSIS COLI; exposure to ASBESTOS; and irradiation of the CERVIX UTERI.
+* **lou gehrig disease** (CUI: C0393554) (CONCEPT)
+
+## TRIGLYCERIDE HYDROLASE ACTIVITY (Physiologic_Function)
+
+### Related Concepts:
+* **hypertriglyceridemias** (CUI: C0020557) (CONCEPT): A condition of elevated levels of TRIGLYCERIDES in the blood.
+* **hypertriglyceridemia familial** (CUI: C0020480) (CONCEPT): A hypertriglyceridemia disorder, often with autosomal dominant inheritance. It is characterized by the persistent elevations of plasma TRIGLYCERIDES, endogenously synthesized and contained predominantly in VERY-LOW-DENSITY LIPOPROTEINS (pre-beta lipoproteins). In contrast, the plasma CHOLESTEROL ...
+* **cholesterol ester hydrolase deficiency** (CUI: C531854) (CONCEPT)
+
+## PUSAN NATIONAL UNIVERSITY HOSPITAL (Health_Care_Related_Organization)
+
+### Related Concepts:
+* **nguyen syndrome** (CUI: C1864823) (CONCEPT)
+* **san luis valley syndrome** (CUI: C0795822) (CONCEPT): Recombinant chromosome 8 with developmental delay, minor facial anomalies, eye abnormalities, high frequency otitis media and hearing loss, congenital heart disease, and genitourinary anomalies. All thus far observed cases have been in patients of Hispanic origin in south-western United States.
+* **tang hsi ryu syndrome** (CUI: C2931363) (CONCEPT)
+
+## MUSCULAR DYSTROPHY (Disease_or_Syndrome)
+
+### Related Concepts:
+* **muscle dystrophy** (CUI: C0026850) (CONCEPT): A heterogeneous group of inherited MYOPATHIES, characterized by wasting and weakness of the SKELETAL MUSCLE. They are categorized by the sites of MUSCLE WEAKNESS; AGE OF ONSET; and INHERITANCE PATTERNS.
+* **muscular dystrophies** (CUI: C0026850) (CONCEPT): A heterogeneous group of inherited MYOPATHIES, characterized by wasting and weakness of the SKELETAL MUSCLE. They are categorized by the sites of MUSCLE WEAKNESS; AGE OF ONSET; and INHERITANCE PATTERNS.
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR PERMANENT TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **caries dental** (CUI: C1707305) (CONCEPT): Tooth decay that has invaded the dentin, creating dentin that is partially demineralized and containing mineral crystals in the tubules.
+* **mouth and tooth diseases** (CUI: C1704330) (CONCEPT): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **dental decay** (CUI: C0011334) (CONCEPT): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR DECIDUOUS TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **mouth and tooth diseases** (CUI: C1704330) (CONCEPT): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **tooth disease** (CUI: C0040435) (CONCEPT): Diseases involving the TEETH.
+* **dental decay** (CUI: C0011334) (CONCEPT): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+## SKIN TENDERNESS (Acquired_Abnormality)
+
+### Related Concepts:
+* **tenderness muscle** (CUI: C0575064) (CONCEPT): Painful sensation felt when pressure is applied to the muscles.
+* **muscle soreness** (CUI: C0231528) (CONCEPT): Painful sensation in the muscles.
+* **muscle tenderness** (CUI: C0575064) (CONCEPT): Painful sensation felt when pressure is applied to the muscles.
+
+## THE OCCURRENCE OF CHH IN THE SAME DENTAL ARCH IN A HEALTHY PATIENT IS MOST LIKELY TO BE A RARE PHENOMENON ()
+
+### Related Concepts:
+* **charcot marie tooth disease type 2d** (CUI: 601472) (CONCEPT)
+* **charcot marie tooth disease type i** (CUI: C0007959) (CONCEPT): A hereditary motor and sensory neuropathy transmitted most often as an autosomal dominant trait and characterized by progressive distal wasting and loss of reflexes in the muscles of the legs (and occasionally involving the arms). Onset is usually in the second to fourth decade of life. This cond...
+* **charcot marie tooth disease dominant intermediate a** (CUI: 606483) (CONCEPT)
+
+## DIODE LASER K81S09F (Manufactured_Object)
+
+### Related Concepts:
+* **burn electric** (CUI: C0006436) (CONCEPT): Burns produced by contact with electric current or from a sudden discharge of electricity.
+* **x ray nk sensitivity** (CUI: C1839408) (CONCEPT)
+* **cmd1z** (CUI: 611879) (CONCEPT)
+
+
+---Response Rules---
+
+- Target format and length: comprehensive and detailed
+- Use markdown formatting with appropriate section headings
+- Please respond in the same language as the user's question
+- Ensure the response maintains continuity with the conversation history
+- List up to 5 most important reference sources at the end under "References" section
+- If you don't know the answer, just say so
+- Do not make anything up. Do not include information not provided by the Knowledge Base
+
+================================================================================
+METADATA (For reference only)
+================================================================================
+Timestamp: 2025-11-30 22:08:28
+Intent: HEALTHCARE_RELATED
+High-level keywords: Medical conditions, Biological molecules, Cancer types, Oral health, Enzymes
+Low-level keywords: Xerostomia, Cathepsin L, Squamous cell carcinoma
+Retrieval Statistics:
+  - Level 1 nodes: 20
+  - Level 2 nodes: 60
+  - Relationships: 62

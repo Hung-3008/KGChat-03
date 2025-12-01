@@ -1,0 +1,308 @@
+================================================================================
+PROMPT READY FOR LLM (Copy phần dưới để sử dụng)
+================================================================================
+
+---Role---
+
+You are a helpful assistant responding to user query about Knowledge Base provided below.
+
+---Goal---
+
+Generate a concise response based on Knowledge Base and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Knowledge Base, and incorporating general knowledge relevant to the Knowledge Base. Do not include information not provided by Knowledge Base.
+
+---Conversation History---
+(No previous conversation)
+
+---User Query---
+What are the xerostomia, cathepsin L and squamous cell carcinoma?
+
+---Knowledge Base---
+
+# KEY CONCEPTS
+
+## PHARMACOLOGIC_SUBSTANCES
+* **C21/M024 (D)**
+
+## PHENOMENON_OR_PROCESSS
+* **No16966**
+* **skewed cell division distributions in E. coli**
+
+## CHEMICAL_VIEWED_STRUCTURALLYS
+* **ITIH4658–688**
+
+## BACTERIUMS
+* **Actinomyces Oris T14v**
+* **Fusobacterium ATCC10953**
+* **Porphyromonas Gingivalis ATCC33277**
+
+## ACQUIRED_ABNORMALITYS
+* **TEN (Toxic Epidermal Necrolysis)**
+* **skin tenderness**
+
+## CELL_OR_MOLECULAR_DYSFUNCTIONS
+* **hypermethylation of the promoter region**
+
+## BIOLOGICALLY_ACTIVE_SUBSTANCES
+* **CpGenome Universal Methylated DNA**
+
+## PHYSIOLOGIC_FUNCTIONS
+* **triglyceride hydrolase activity**
+
+## HUMAN_CAUSED_PHENOMENON_OR_PROCESSS
+* **chromosome 20q11.21 deletion**
+
+## RESEARCH_DEVICES
+* **ABI 3730XL Genetic Analyzer**
+
+## MANUFACTURED_OBJECTS
+* **cDNA Reverse Transcription Kit**
+
+## LABORATORY_PROCEDURES
+* **Decayed, missing and filled surfaces index for permanent teeth**
+* **Decayed, missing and filled surfaces index for deciduous teeth**
+
+## GENETIC_FUNCTIONS
+* **transcriptional silencing through promoter methylation**
+
+## HEALTH_CARE_RELATED_ORGANIZATIONS
+* **Pusan National University Hospital**
+
+## DISEASE_OR_SYNDROMES
+* **muscular dystrophy**
+
+# RELATIONSHIPS
+
+## REF_TO
+* C21/M024 (D) → ibd21
+* C21/M024 (D) → iddm21
+* C21/M024 (D) → cyp21 deficiency
+* No16966 → eds6b formerly
+* No16966 → eds6
+* No16966 → eds6a formerly
+* ITIH4658–688 → gegenhalten
+* ITIH4658–688 → itai itai
+* ITIH4658–688 → lou gehrig disease
+* Actinomyces Oris T14v → actinomyces infection
+* Actinomyces Oris T14v → actinomyces infections
+* Actinomyces Oris T14v → infections actinomyces
+* skewed cell division distributions in E. coli → e coli infection
+* skewed cell division distributions in E. coli → infections e coli
+* skewed cell division distributions in E. coli → infection e coli
+* Fusobacterium ATCC10953 → fcc1
+* Fusobacterium ATCC10953 → fusobacterium infection
+* Fusobacterium ATCC10953 → fusobacterium infections
+* TEN (Toxic Epidermal Necrolysis) → toxic epidermal necrolyses
+* TEN (Toxic Epidermal Necrolysis) → toxic epidermal necrolysis
+* TEN (Toxic Epidermal Necrolysis) → necrolysis toxic epidermal
+* hypermethylation of the promoter region → genomic instability
+* hypermethylation of the promoter region → hypermelanoses
+* hypermethylation of the promoter region → hyperhistidinemia
+* Porphyromonas Gingivalis ATCC33277 → meningitis pneumococcal penicillin resistant
+* Porphyromonas Gingivalis ATCC33277 → acinetobacter infection
+* Porphyromonas Gingivalis ATCC33277 → acinetobacter infections
+* CpGenome Universal Methylated DNA → dna repair deficiencies
+* CpGenome Universal Methylated DNA → dmda
+* CpGenome Universal Methylated DNA → dhmnvp
+* triglyceride hydrolase activity → hypertriglyceridemias
+* triglyceride hydrolase activity → hypertriglyceridemia familial
+* triglyceride hydrolase activity → cholesterol ester hydrolase deficiency
+* chromosome 20q11.21 deletion → chromosome 21 tetrasomy 21q
+* chromosome 20q11.21 deletion → chromosome 20 deletion 20p
+* chromosome 20q11.21 deletion → chromosome 21 monosomy 21q22
+* ABI 3730XL Genetic Analyzer → xlhr
+* ABI 3730XL Genetic Analyzer → kiaa1901
+* ABI 3730XL Genetic Analyzer → mrxsarts
+* cDNA Reverse Transcription Kit → rhdns1
+* cDNA Reverse Transcription Kit → cds
+* cDNA Reverse Transcription Kit → cdl3a
+* skin tenderness → tenderness muscle
+* skin tenderness → muscle soreness
+* skin tenderness → muscle tenderness
+* Decayed, missing and filled surfaces index for permanent teeth → caries dental
+* Decayed, missing and filled surfaces index for permanent teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for permanent teeth → dental decay
+* transcriptional silencing through promoter methylation → genomic instability
+* transcriptional silencing through promoter methylation → thiopurine methyltransferase deficiency
+* transcriptional silencing through promoter methylation → genome instability
+* Decayed, missing and filled surfaces index for deciduous teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for deciduous teeth → tooth disease
+* Decayed, missing and filled surfaces index for deciduous teeth → dental decay
+* Pusan National University Hospital → nguyen syndrome
+* Pusan National University Hospital → san luis valley syndrome
+* Pusan National University Hospital → tang hsi ryu syndrome
+* muscular dystrophy → muscle dystrophy
+* muscular dystrophy → muscular dystrophies
+
+## ASSOCIATED_WITH
+* ITIH4658–688 → ovarian cancer
+* ITIH4658–688 → colorectal cancer
+
+## TREATS
+* ITIH4658–688 → breast cancer
+
+# DETAILED INFORMATION
+
+## C21/M024 (D) (Pharmacologic_Substance)
+
+### Related Concepts:
+* **ibd21** (CUI: 612354) (Level 2)
+* **iddm21** (CUI: C2675865) (Level 2)
+* **cyp21 deficiency** (CUI: 201910) (Level 2)
+
+## NO16966 (Phenomenon_or_Process)
+
+### Related Concepts:
+* **eds6b formerly** (CUI: 601776) (Level 2)
+* **eds6** (CUI: 225400) (Level 2)
+* **eds6a formerly** (CUI: 225400) (Level 2)
+
+## ITIH4658–688 (Chemical_Viewed_Structurally)
+
+### Related Concepts:
+* **ovarian cancer** (CUI: C0919267) (Level 2): Tumors or cancer of the OVARY. These neoplasms can be benign or malignant. They are classified according to the tissue of origin, such as the surface EPITHELIUM, the stromal endocrine cells, and the totipotent GERM CELLS.
+* **gegenhalten** (CUI: C0239325) (Level 2)
+* **itai itai** (CUI: C0006635) (Level 2): Poisoning occurring after exposure to cadmium compounds or fumes. It may cause gastrointestinal syndromes, anemia, or pneumonitis.
+* **breast cancer** (CUI: C4704874) (Level 2): Cancer of the human MAMMARY GLAND.
+* **colorectal cancer** (CUI: C0009404) (Level 2): Tumors or cancer of the COLON or the RECTUM or both. Risk factors for colorectal cancer include chronic ULCERATIVE COLITIS; FAMILIAL POLYPOSIS COLI; exposure to ASBESTOS; and irradiation of the CERVIX UTERI.
+* **lou gehrig disease** (CUI: C0393554) (Level 2)
+
+## ACTINOMYCES ORIS T14V (Bacterium)
+
+### Related Concepts:
+* **actinomyces infection** (CUI: C0001261) (Level 2): Infections with bacteria of the genus ACTINOMYCES.
+* **actinomyces infections** (CUI: C0001261) (Level 2): Infections with bacteria of the genus ACTINOMYCES.
+* **infections actinomyces** (CUI: C0001261) (Level 2): Infections with bacteria of the genus ACTINOMYCES.
+
+## SKEWED CELL DIVISION DISTRIBUTIONS IN E. COLI (Phenomenon_or_Process)
+
+### Related Concepts:
+* **e coli infection** (CUI: C0014836) (Level 2): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infections e coli** (CUI: C0014836) (Level 2): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infection e coli** (CUI: C0014836) (Level 2): Infections with bacteria of the species ESCHERICHIA COLI.
+
+## FUSOBACTERIUM ATCC10953 (Bacterium)
+
+### Related Concepts:
+* **fcc1** (CUI: C2931459) (Level 2)
+* **fusobacterium infection** (CUI: C0027537) (Level 2)
+* **fusobacterium infections** (CUI: C0027537) (Level 2)
+
+## TEN (TOXIC EPIDERMAL NECROLYSIS) (Acquired_Abnormality)
+
+### Related Concepts:
+* **toxic epidermal necrolyses** (CUI: 608579) (Level 2)
+* **toxic epidermal necrolysis** (CUI: 608579) (Level 2)
+* **necrolysis toxic epidermal** (CUI: 608579) (Level 2)
+
+## HYPERMETHYLATION OF THE PROMOTER REGION (Cell_or_Molecular_Dysfunction)
+
+### Related Concepts:
+* **genomic instability** (CUI: C0919532) (Level 2): An increased tendency of the GENOME to acquire MUTATIONS when various processes involved in maintaining and replicating the genome are dysfunctional.
+* **hypermelanoses** (CUI: C0333616) (Level 2)
+* **hyperhistidinemia** (CUI: 235800) (Level 2)
+
+## PORPHYROMONAS GINGIVALIS ATCC33277 (Bacterium)
+
+### Related Concepts:
+* **meningitis pneumococcal penicillin resistant** (CUI: C0025295) (Level 2): An acute purulent infection of the meninges and subarachnoid space caused by Streptococcus pneumoniae, most prevalent in children and adults over the age of 60. This illness may be associated with OTITIS MEDIA; MASTOIDITIS; SINUSITIS; RESPIRATORY TRACT INFECTIONS; sickle cell disease (ANEMIA, SIC...
+* **acinetobacter infection** (CUI: C0001139) (Level 2): Infections with bacteria of the genus ACINETOBACTER.
+* **acinetobacter infections** (CUI: C0001139) (Level 2): Infections with bacteria of the genus ACINETOBACTER.
+
+## CPGENOME UNIVERSAL METHYLATED DNA (Biologically_Active_Substance)
+
+### Related Concepts:
+* **dna repair deficiencies** (CUI: C0268134) (Level 2)
+* **dmda** (CUI: C0410173) (Level 2): A subtype of autosomal recessive limb-girdle muscular dystrophy characterized by a childhood onset of progressive shoulder and pelvic girdle muscle weakness and atrophy frequently associated with calf hypertrophy, diaphragmatic weakness, and/or variable cardiac abnormalities. Mild to moderate ele...
+* **dhmnvp** (CUI: 158580) (Level 2)
+
+## TRIGLYCERIDE HYDROLASE ACTIVITY (Physiologic_Function)
+
+### Related Concepts:
+* **hypertriglyceridemias** (CUI: C0020557) (Level 2): A condition of elevated levels of TRIGLYCERIDES in the blood.
+* **hypertriglyceridemia familial** (CUI: C0020480) (Level 2): A hypertriglyceridemia disorder, often with autosomal dominant inheritance. It is characterized by the persistent elevations of plasma TRIGLYCERIDES, endogenously synthesized and contained predominantly in VERY-LOW-DENSITY LIPOPROTEINS (pre-beta lipoproteins). In contrast, the plasma CHOLESTEROL ...
+* **cholesterol ester hydrolase deficiency** (CUI: C531854) (Level 2)
+
+## CHROMOSOME 20Q11.21 DELETION (Human_caused_Phenomenon_or_Process)
+
+### Related Concepts:
+* **chromosome 21 tetrasomy 21q** (CUI: C0795877) (Level 2): Partial tetrasomy involving the long arm of chromosome 21 with mental retardation, craniofacial dysmorphism, hernia, genital anomalies, and hand and foot deformities.
+* **chromosome 20 deletion 20p** (CUI: C2930887) (Level 2)
+* **chromosome 21 monosomy 21q22** (CUI: C2931423) (Level 2)
+
+## ABI 3730XL GENETIC ANALYZER (Research_Device)
+
+### Related Concepts:
+* **xlhr** (CUI: C3536984) (Level 2)
+* **kiaa1901** (CUI: 604588) (Level 2)
+* **mrxsarts** (CUI: 301835) (Level 2)
+
+## CDNA REVERSE TRANSCRIPTION KIT (Manufactured_Object)
+
+### Related Concepts:
+* **rhdns1** (CUI: 610805) (Level 2)
+* **cds** (CUI: 275630) (Level 2)
+* **cdl3a** (CUI: 608471) (Level 2)
+
+## SKIN TENDERNESS (Acquired_Abnormality)
+
+### Related Concepts:
+* **tenderness muscle** (CUI: C0575064) (Level 2): Painful sensation felt when pressure is applied to the muscles.
+* **muscle soreness** (CUI: C0231528) (Level 2): Painful sensation in the muscles.
+* **muscle tenderness** (CUI: C0575064) (Level 2): Painful sensation felt when pressure is applied to the muscles.
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR PERMANENT TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **caries dental** (CUI: C1707305) (Level 2): Tooth decay that has invaded the dentin, creating dentin that is partially demineralized and containing mineral crystals in the tubules.
+* **mouth and tooth diseases** (CUI: C1704330) (Level 2): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **dental decay** (CUI: C0011334) (Level 2): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+## TRANSCRIPTIONAL SILENCING THROUGH PROMOTER METHYLATION (Genetic_Function)
+
+### Related Concepts:
+* **genomic instability** (CUI: C0919532) (Level 2): An increased tendency of the GENOME to acquire MUTATIONS when various processes involved in maintaining and replicating the genome are dysfunctional.
+* **thiopurine methyltransferase deficiency** (CUI: C2931223) (Level 2)
+* **genome instability** (CUI: C1257825) (Level 2)
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR DECIDUOUS TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **mouth and tooth diseases** (CUI: C1704330) (Level 2): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **tooth disease** (CUI: C0040435) (Level 2): Diseases involving the TEETH.
+* **dental decay** (CUI: C0011334) (Level 2): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+## PUSAN NATIONAL UNIVERSITY HOSPITAL (Health_Care_Related_Organization)
+
+### Related Concepts:
+* **nguyen syndrome** (CUI: C1864823) (Level 2)
+* **san luis valley syndrome** (CUI: C0795822) (Level 2): Recombinant chromosome 8 with developmental delay, minor facial anomalies, eye abnormalities, high frequency otitis media and hearing loss, congenital heart disease, and genitourinary anomalies. All thus far observed cases have been in patients of Hispanic origin in south-western United States.
+* **tang hsi ryu syndrome** (CUI: C2931363) (Level 2)
+
+## MUSCULAR DYSTROPHY (Disease_or_Syndrome)
+
+### Related Concepts:
+* **muscle dystrophy** (CUI: C0026850) (Level 2): A heterogeneous group of inherited MYOPATHIES, characterized by wasting and weakness of the SKELETAL MUSCLE. They are categorized by the sites of MUSCLE WEAKNESS; AGE OF ONSET; and INHERITANCE PATTERNS.
+* **muscular dystrophies** (CUI: C0026850) (Level 2): A heterogeneous group of inherited MYOPATHIES, characterized by wasting and weakness of the SKELETAL MUSCLE. They are categorized by the sites of MUSCLE WEAKNESS; AGE OF ONSET; and INHERITANCE PATTERNS.
+
+
+---Response Rules---
+
+- Target format and length: comprehensive and detailed
+- Use markdown formatting with appropriate section headings
+- Please respond in the same language as the user's question
+- Ensure the response maintains continuity with the conversation history
+- List up to 5 most important reference sources at the end under "References" section
+- If you don't know the answer, just say so
+- Do not make anything up. Do not include information not provided by the Knowledge Base
+
+================================================================================
+METADATA (For reference only)
+================================================================================
+Timestamp: 2025-12-01 21:05:54
+Intent: HEALTHCARE_RELATED
+High-level keywords: Medical conditions, Biological enzymes, Cancer types, Oral health
+Low-level keywords: xerostomia, cathepsin L, squamous cell carcinoma
+Retrieval Statistics:
+  - Level 1 nodes: 20
+  - Level 2 nodes: 59
+  - Relationships: 62

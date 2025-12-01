@@ -1,0 +1,161 @@
+================================================================================
+RETRIEVAL RESULT - KNOWLEDGE GRAPH QUERY
+================================================================================
+
+Query: What are the xerostomia, cathepsin L and squamous cell carcinoma?
+Timestamp: 2025-11-30 21:42:42
+Intent: HEALTHCARE_RELATED
+
+High-level keywords: Medical conditions, Biology, Cancer, Oral health, Enzymes
+Low-level keywords: Xerostomia, Cathepsin L, Squamous cell carcinoma
+
+Retrieval Statistics:
+  - Level 1 nodes: 10
+  - Level 2 nodes: 30
+  - Relationships: 30
+
+================================================================================
+FORMATTED RETRIEVAL CONTEXT (READY FOR LLM)
+================================================================================
+
+
+# KEY CONCEPTS
+
+## PHENOMENON_OR_PROCESSS
+* **skewed cell division distributions in E. coli**
+* **No16966**
+
+## PHARMACOLOGIC_SUBSTANCES
+* **C21/M024 (D)**
+
+## MOLECULAR_BIOLOGY_RESEARCH_TECHNIQUES
+* **dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH)**
+
+## BIOLOGICALLY_ACTIVE_SUBSTANCES
+* **CpGenome Universal Methylated DNA**
+
+## BACTERIUMS
+* **Porphyromonas Gingivalis ATCC33277**
+
+## CELL_OR_MOLECULAR_DYSFUNCTIONS
+* **hypermethylation of the promoter region**
+
+## HEALTH_CARE_RELATED_ORGANIZATIONS
+* **Soonchunhyang University Hospital**
+
+## PHYSIOLOGIC_FUNCTIONS
+* **triglyceride hydrolase activity**
+
+## LABORATORY_PROCEDURES
+* **Decayed, missing and filled surfaces index for deciduous teeth**
+
+# RELATIONSHIPS
+
+## REF_TO
+* skewed cell division distributions in E. coli → e coli infection
+* skewed cell division distributions in E. coli → infections e coli
+* skewed cell division distributions in E. coli → infection e coli
+* C21/M024 (D) → ibd21
+* C21/M024 (D) → iddm21
+* C21/M024 (D) → cyp21 deficiency
+* dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH) → x inactivation familial skewed 2
+* dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH) → er negative pr negative her2 negative breast neoplasms
+* dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH) → er negative pr negative her2 negative breast cancer
+* No16966 → eds6b formerly
+* No16966 → eds6
+* No16966 → eds6a formerly
+* CpGenome Universal Methylated DNA → dna repair deficiencies
+* CpGenome Universal Methylated DNA → dmda
+* CpGenome Universal Methylated DNA → dhmnvp
+* Porphyromonas Gingivalis ATCC33277 → meningitis pneumococcal penicillin resistant
+* Porphyromonas Gingivalis ATCC33277 → acinetobacter infection
+* Porphyromonas Gingivalis ATCC33277 → acinetobacter infections
+* hypermethylation of the promoter region → genomic instability
+* hypermethylation of the promoter region → hypermelanoses
+* hypermethylation of the promoter region → hyperhistidinemia
+* Soonchunhyang University Hospital → nguyen syndrome
+* Soonchunhyang University Hospital → tang hsi ryu syndrome
+* Soonchunhyang University Hospital → yin hsu
+* triglyceride hydrolase activity → hypertriglyceridemias
+* triglyceride hydrolase activity → hypertriglyceridemia familial
+* triglyceride hydrolase activity → cholesterol ester hydrolase deficiency
+* Decayed, missing and filled surfaces index for deciduous teeth → mouth and tooth diseases
+* Decayed, missing and filled surfaces index for deciduous teeth → tooth disease
+* Decayed, missing and filled surfaces index for deciduous teeth → dental decay
+
+# DETAILED INFORMATION
+
+## SKEWED CELL DIVISION DISTRIBUTIONS IN E. COLI (Phenomenon_or_Process)
+
+### Related Concepts:
+* **e coli infection** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infections e coli** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infection e coli** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+
+## C21/M024 (D) (Pharmacologic_Substance)
+
+### Related Concepts:
+* **ibd21** (CUI: 612354) (CONCEPT)
+* **iddm21** (CUI: C2675865) (CONCEPT)
+* **cyp21 deficiency** (CUI: 201910) (CONCEPT)
+
+## DUAL-COLOR CHROMOGENIC IN SITU HYBRIDIZATION (INFORM HER2 DUAL ISH) (Molecular_Biology_Research_Technique)
+
+### Related Concepts:
+* **x inactivation familial skewed 2** (CUI: C1846257) (CONCEPT)
+* **er negative pr negative her2 negative breast neoplasms** (CUI: C3539878) (CONCEPT): Breast neoplasms that do not express ESTROGEN RECEPTORS; PROGESTERONE RECEPTORS; and do not overexpress the NEU RECEPTOR/HER-2 PROTO-ONCOGENE PROTEIN.
+* **er negative pr negative her2 negative breast cancer** (CUI: C3539878) (CONCEPT): Breast neoplasms that do not express ESTROGEN RECEPTORS; PROGESTERONE RECEPTORS; and do not overexpress the NEU RECEPTOR/HER-2 PROTO-ONCOGENE PROTEIN.
+
+## NO16966 (Phenomenon_or_Process)
+
+### Related Concepts:
+* **eds6b formerly** (CUI: 601776) (CONCEPT)
+* **eds6** (CUI: 225400) (CONCEPT)
+* **eds6a formerly** (CUI: 225400) (CONCEPT)
+
+## CPGENOME UNIVERSAL METHYLATED DNA (Biologically_Active_Substance)
+
+### Related Concepts:
+* **dna repair deficiencies** (CUI: C0268134) (CONCEPT)
+* **dmda** (CUI: C0410173) (CONCEPT): A subtype of autosomal recessive limb-girdle muscular dystrophy characterized by a childhood onset of progressive shoulder and pelvic girdle muscle weakness and atrophy frequently associated with calf hypertrophy, diaphragmatic weakness, and/or variable cardiac abnormalities. Mild to moderate ele...
+* **dhmnvp** (CUI: 158580) (CONCEPT)
+
+## PORPHYROMONAS GINGIVALIS ATCC33277 (Bacterium)
+
+### Related Concepts:
+* **meningitis pneumococcal penicillin resistant** (CUI: C0025295) (CONCEPT): An acute purulent infection of the meninges and subarachnoid space caused by Streptococcus pneumoniae, most prevalent in children and adults over the age of 60. This illness may be associated with OTITIS MEDIA; MASTOIDITIS; SINUSITIS; RESPIRATORY TRACT INFECTIONS; sickle cell disease (ANEMIA, SIC...
+* **acinetobacter infection** (CUI: C0001139) (CONCEPT): Infections with bacteria of the genus ACINETOBACTER.
+* **acinetobacter infections** (CUI: C0001139) (CONCEPT): Infections with bacteria of the genus ACINETOBACTER.
+
+## HYPERMETHYLATION OF THE PROMOTER REGION (Cell_or_Molecular_Dysfunction)
+
+### Related Concepts:
+* **genomic instability** (CUI: C0919532) (CONCEPT): An increased tendency of the GENOME to acquire MUTATIONS when various processes involved in maintaining and replicating the genome are dysfunctional.
+* **hypermelanoses** (CUI: C0333616) (CONCEPT)
+* **hyperhistidinemia** (CUI: 235800) (CONCEPT)
+
+## SOONCHUNHYANG UNIVERSITY HOSPITAL (Health_Care_Related_Organization)
+
+### Related Concepts:
+* **nguyen syndrome** (CUI: C1864823) (CONCEPT)
+* **tang hsi ryu syndrome** (CUI: C2931363) (CONCEPT)
+* **yin hsu** (CUI: C0085257) (CONCEPT): In the YIN-YANG system of philosophy and medicine, an insufficiency of body fluid (called yinxu), manifesting often as irritability, thirst, constipation, etc. (The Pinyin Chinese-English Dictionary, 1979).
+
+## TRIGLYCERIDE HYDROLASE ACTIVITY (Physiologic_Function)
+
+### Related Concepts:
+* **hypertriglyceridemias** (CUI: C0020557) (CONCEPT): A condition of elevated levels of TRIGLYCERIDES in the blood.
+* **hypertriglyceridemia familial** (CUI: C0020480) (CONCEPT): A hypertriglyceridemia disorder, often with autosomal dominant inheritance. It is characterized by the persistent elevations of plasma TRIGLYCERIDES, endogenously synthesized and contained predominantly in VERY-LOW-DENSITY LIPOPROTEINS (pre-beta lipoproteins). In contrast, the plasma CHOLESTEROL ...
+* **cholesterol ester hydrolase deficiency** (CUI: C531854) (CONCEPT)
+
+## DECAYED, MISSING AND FILLED SURFACES INDEX FOR DECIDUOUS TEETH (Laboratory_Procedure)
+
+### Related Concepts:
+* **mouth and tooth diseases** (CUI: C1704330) (CONCEPT): A non-neoplastic or neoplastic (benign or malignant) disorder affecting the teeth.
+* **tooth disease** (CUI: C0040435) (CONCEPT): Diseases involving the TEETH.
+* **dental decay** (CUI: C0011334) (CONCEPT): Localized destruction of the tooth surface initiated by decalcification of the enamel followed by enzymatic lysis of organic structures and leading to cavity formation. If left unchecked, the cavity may penetrate the enamel and dentin and reach the pulp.
+
+
+================================================================================
+END OF RETRIEVAL RESULT
+================================================================================

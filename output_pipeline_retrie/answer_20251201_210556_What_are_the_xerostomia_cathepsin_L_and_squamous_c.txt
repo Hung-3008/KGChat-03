@@ -1,0 +1,25 @@
+================================================================================
+LLM ANSWER - KNOWLEDGE GRAPH QUERY
+================================================================================
+
+Query: What are the xerostomia, cathepsin L and squamous cell carcinoma?
+Timestamp: 2025-12-01 21:05:56
+Intent: HEALTHCARE_RELATED
+Prompt File: /Users/maitiendung/TAI LIEU/HOME/KG_github_3011/KGChat-03/output_pipeline_retrie/prompt_20251201_210554_What_are_the_xerostomia_cathepsin_L_and_squamous_c.txt
+
+================================================================================
+ANSWER
+================================================================================
+
+Based on the provided Knowledge Base, there is no information available regarding xerostomia, cathepsin L, or squamous cell carcinoma.
+
+================================================================================
+METADATA
+================================================================================
+High-level keywords: Medical conditions, Biological enzymes, Cancer types, Oral health
+Low-level keywords: xerostomia, cathepsin L, squamous cell carcinoma
+Retrieval Statistics:
+  - Level 1 nodes: 20
+  - Level 2 nodes: 59
+  - Relationships: 62
+Answer length: 134 characters

@@ -10,7 +10,7 @@ load_dotenv()
 
 class GeminiClient:
     def __init__(self, config: dict, **kwargs):
-        self.model_name = config.get("model", "gemini-2.5-flash")
+        self.model_name = config.get("model", "gemini-1.5-flash")
         self.temperature = config.get("temperature", 0.85)
         self.top_p = config.get("top_p", 0.9)
         self.api_key = os.getenv("GEMINI_API_KEY")

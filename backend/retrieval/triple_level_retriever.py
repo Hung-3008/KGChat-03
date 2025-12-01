@@ -1,0 +1,648 @@
+"""
+Dual-Level Knowledge Graph Retriever
+
+This module retrieves relevant information from the two-level knowledge graph
+based on high-level and low-level keywords extracted from user queries.
+It uses vector similarity search to find relevant concepts in Level 1,
+then traverses connections to more specific Level 2 nodes.
+"""
+import logging
+import asyncio
+from typing import List, Dict, Any, Optional, Set, Union, Tuple
+
+from backend.db.neo4j_client import Neo4jClient
+from backend.db.vector_db import VectorDBClient
+from backend.utils.logging import get_logger
+
+# Configure logger
+logger = get_logger(__name__)
+
+
+async def retrieve_from_knowledge_graph(
+    high_level_keywords: List[str],
+    low_level_keywords: List[str],
+    neo4j_client: Neo4jClient,
+    ollama_client: Any,
+    qdrant_client: Optional[VectorDBClient] = None,
+    top_k: int = 5,
+    max_distance: float = 0.8,
+    similarity_threshold: float = 0.7
+) -> Dict[str, Any]:
+    """
+    Retrieve relevant information from the two-level knowledge graph.
+
+    Args:
+        high_level_keywords: High-level keywords from the query
+        low_level_keywords: Low-level keywords from the query
+        neo4j_client: Neo4j database client
+        ollama_client: Ollama client for embedding generation
+        qdrant_client: Optional Vector database client for similarity search
+        top_k: Number of top results to retrieve for each keyword
+        max_distance: Maximum vector distance for retrievals
+        similarity_threshold: Minimum similarity score threshold
+
+    Returns:
+        Dictionary with retrieved context from both knowledge graph levels
+    """
+    retrieval_context = {
+        "level1_nodes": [],
+        "level2_nodes": [],
+        "relationships": [],
+        "sources": [],
+        "combined_text": ""
+    }
+
+    if not high_level_keywords and not low_level_keywords:
+        logger.warning("No keywords provided for knowledge graph retrieval")
+        return retrieval_context
+
+    logger.info(
+        f"Retrieving knowledge with high-level keywords: {high_level_keywords}")
+    logger.info(
+        f"Retrieving knowledge with low-level keywords: {low_level_keywords}")
+
+    all_keywords = high_level_keywords + low_level_keywords
+
+    try:
+        # STEP 1: Generate embeddings for all keywords
+        embeddings = await ollama_client.embed(all_keywords)
+
+        # STEP 2: Retrieve relevant Level 1 nodes using vector similarity
+        level1_entities = await retrieve_level1_nodes(
+            embeddings,
+            qdrant_client,
+            neo4j_client,
+            top_k=top_k,
+            similarity_threshold=similarity_threshold
+        )
+
+        # Store Level 1 nodes in context
+        retrieval_context["level1_nodes"] = level1_entities
+
+        # STEP 3: For each retrieved Level 1 node, find referenced Level 2 nodes
+        level2_entities, relationships = await retrieve_level2_references(
+            level1_entities,
+            neo4j_client,
+            max_references=top_k
+        )
+
+        # Store Level 2 nodes and relationships in context
+        retrieval_context["level2_nodes"] = level2_entities
+        retrieval_context["relationships"] = relationships
+
+        # STEP 4: Format the retrieved information into a combined text
+        combined_text = format_retrieval_results(
+            level1_entities,
+            level2_entities,
+            relationships
+        )
+
+        retrieval_context["combined_text"] = combined_text
+
+        return retrieval_context
+
+    except Exception as e:
+        logger.error(f"Error during knowledge graph retrieval: {str(e)}")
+        return retrieval_context
+
+
+async def retrieve_level1_nodes(
+    embeddings: List[List[float]],
+    qdrant_client: Any,
+    neo4j_client: Neo4jClient,
+    top_k: int = 5,
+    similarity_threshold: float = 0.7
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve Level 1 nodes using vector similarity search.
+
+    Args:
+        embeddings: List of embedding vectors for keywords
+        qdrant_client: Vector database client for similarity search
+        neo4j_client: Neo4j database client for retrieving node data
+        top_k: Number of top results to retrieve for each keyword
+        similarity_threshold: Minimum similarity score threshold
+
+    Returns:
+        List of retrieved Level 1 node dictionaries
+    """
+    retrieved_entities = []
+    unique_entity_ids = set()
+
+    try:
+        for embedding in embeddings:
+            try:
+                # Query Qdrant for similar vectors
+                similar_nodes = qdrant_client.query_points(
+                    collection_name="kg_lv1_nodes",
+                    query=embedding,
+                    limit=top_k
+                )
+
+                logger.info(
+                    f"Found {len(similar_nodes.points) if hasattr(similar_nodes, 'points') else 0} similar Level 1 nodes")
+
+                for node in similar_nodes.points:
+                    # Extracting node ID directly from Qdrant point id, which corresponds to the 'id' field in Neo4j
+                    # Using node.id directly as the identifier
+                    entity_id = str(node.id) if hasattr(
+                        node, 'id') and node.id is not None else None
+                    similarity_score = getattr(node, 'score', None)
+
+                    if not entity_id:
+                        logger.warning(
+                            f"Node missing id. "
+                            f"Payload keys: {list(node.payload.keys()) if node.payload else 'None'}, "
+                            f"Score: {similarity_score}")
+                        continue
+
+                    if entity_id in unique_entity_ids:
+                        logger.debug(
+                            f"Skipping duplicate node_id: {entity_id} (already in unique_entity_ids)")
+                        continue
+
+                    # Querying Neo4j to retrieve full node data matching the structure: id, name, semantic_type, cui, definition, icd, level
+                    # Using parameterized query first, with fallback to direct string interpolation if needed
+                    query = """
+                    MATCH (n:Level1 {id: $entity_id})
+                    RETURN n.id as id, n.name as name, n.semantic_type as semantic_type,
+                           n.cui as cui, n.definition as definition, n.icd as icd, n.level as level
+                    """
+
+                    try:
+                        logger.info(
+                            f"Querying Neo4j with entity_id: {entity_id} (type: {type(entity_id).__name__})")
+                        results = await neo4j_client.execute_query(query, {"entity_id": entity_id})
+                        logger.info(
+                            f"Neo4j query result: {type(results).__name__}, length: {len(results) if results else 0}, "
+                            f"result content: {results[:1] if results else 'empty'}")
+
+                        # Fallback to direct string interpolation if parameterized query returns no results
+                        if not results or len(results) == 0:
+                            # Checking total number of Level1 nodes in database for diagnostic purposes
+                            count_query = "MATCH (n:Level1) RETURN count(n) as total"
+                            count_result = await neo4j_client.execute_query(count_query)
+                            total_nodes = count_result[0].get(
+                                'total', 0) if count_result and len(count_result) > 0 else 0
+                            logger.warning(
+                                f"Node not found with id: {entity_id}. "
+                                f"Total Level1 nodes in database: {total_nodes}")
+
+                            # Attempting direct query with string interpolation as fallback
+                            logger.warning(
+                                f"Attempting direct query with string interpolation for entity_id: {entity_id}")
+                            query_direct = f"""
+                            MATCH (n:Level1 {{id: '{entity_id}'}})
+                            RETURN n.id as id, n.name as name, n.semantic_type as semantic_type,
+                                   n.cui as cui, n.definition as definition, n.icd as icd, n.level as level
+                            """
+                            results_direct = await neo4j_client.execute_query(query_direct)
+                            logger.info(
+                                f"Direct query result: {type(results_direct).__name__}, length: {len(results_direct) if results_direct else 0}")
+                            if results_direct and len(results_direct) > 0:
+                                logger.warning(
+                                    f"Direct query found node but parameterized query did not. "
+                                    f"This may indicate a parameter binding issue.")
+                                results = results_direct
+
+                        if results and len(results) > 0:
+                            # Creating node data dictionary matching the actual node structure
+                            # Neo4j stores: id, name, semantic_type, cui, definition, icd, level
+                            # Qdrant payload stores: name, semantic_type
+                            node_data = {
+                                "id": results[0].get("id", entity_id),
+                                # Keeping entity_id for backward compatibility
+                                "entity_id": results[0].get("id", entity_id),
+                                "name": results[0].get("name", ""),
+                                "semantic_type": results[0].get("semantic_type", ""),
+                                # CUI code (may be empty)
+                                "cui": results[0].get("cui", ""),
+                                # Definition (may be empty)
+                                "definition": results[0].get("definition", ""),
+                                # ICD code (may be empty)
+                                "icd": results[0].get("icd", ""),
+                                # Level (should be "Level 1")
+                                "level": results[0].get("level", "Level 1"),
+                                # Keeping entity_type for backward compatibility (using semantic_type)
+                                "entity_type": results[0].get("semantic_type", "CONCEPT"),
+                                # Using definition as description if available, otherwise empty
+                                "description": results[0].get("definition", ""),
+                                "similarity_score": similarity_score
+                            }
+
+                            retrieved_entities.append(node_data)
+                            unique_entity_ids.add(entity_id)
+                            logger.debug(
+                                f"Retrieved node from Neo4j: {node_data.get('name')} "
+                                f"(id: {entity_id}, score: {similarity_score})")
+                        else:
+                            logger.warning(
+                                f"Node not found in Neo4j with id: {entity_id} "
+                                f"(score: {similarity_score})")
+                    except Exception as query_error:
+                        logger.error(
+                            f"Error querying Neo4j for entity_id {entity_id}: {str(query_error)}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+
+            except Exception as e:
+                logger.error(f"Error retrieving similar nodes: {str(e)}")
+
+        # Sort by similarity score
+        retrieved_entities.sort(key=lambda x: x.get(
+            "similarity_score", 0), reverse=True)
+
+        # Limit to top_k * 2 most relevant nodes overall
+        max_nodes = top_k * 2
+        if len(retrieved_entities) > max_nodes:
+            retrieved_entities = retrieved_entities[:max_nodes]
+
+        logger.info(
+            f"Retrieved {len(retrieved_entities)} unique Level 1 nodes")
+        return retrieved_entities
+
+    except Exception as e:
+        logger.error(f"Error in Level 1 node retrieval: {str(e)}")
+        return []
+
+
+async def retrieve_level2_references(
+    level1_nodes: List[Dict[str, Any]],
+    neo4j_client: Neo4jClient,
+    max_references: int = 5
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Retrieve Level 2 nodes referenced by Level 1 nodes.
+
+    Args:
+        level1_nodes: List of Level 1 node dictionaries
+        neo4j_client: Neo4j database client
+        max_references: Maximum number of references to retrieve per Level 1 node
+
+    Returns:
+        Tuple of (level2_nodes, relationships) lists
+    """
+    level2_nodes = []
+    relationships = []
+    unique_level2_ids = set()
+    unique_relationship_ids = set()
+
+    try:
+        for level1_node in level1_nodes:
+            # Using 'id' as the primary identifier matching the actual node structure
+            entity_id = level1_node.get("id") or level1_node.get("entity_id")
+            if not entity_id:
+                continue
+
+            # Retrieving Level 2 nodes connected to this Level 1 node
+            # Query matches any relationship type between Level1 and Level2 nodes
+            # Returns node properties: id, name, cui, definition, semantic_types, semantic_type, icd, and relationship type
+            # Relationship types in database may include IS_A, REFERENCES, or other types
+            query = """
+            MATCH (l1:Level1 {id: $entity_id})-[r]->(l2:Level2)
+            RETURN l2.id AS id, l2.name AS name, l2.cui AS cui, 
+                   l2.definition AS definition, l2.semantic_types AS semantic_types,
+                   l2.semantic_type AS semantic_type, l2.icd AS icd,
+                   type(r) AS relationship_type
+            LIMIT $limit
+            """
+
+            results = await neo4j_client.execute_query(
+                query,
+                {"entity_id": entity_id, "limit": max_references}
+            )
+
+            for record in results:
+                # Creating Level 2 node data dictionary matching the actual node structure
+                level2_id = record.get("id", "")
+                semantic_types = record.get("semantic_types", [])
+                # Single semantic_type field
+                semantic_type = record.get("semantic_type", "")
+                # Extracting first semantic type if available, defaulting to semantic_type or "CONCEPT"
+                entity_type = semantic_types[0] if semantic_types else (
+                    semantic_type if semantic_type else "CONCEPT")
+                # Extracting actual relationship type from query result
+                relationship_type = record.get(
+                    "relationship_type", "RELATED_TO")
+
+                level2_data = {
+                    "id": level2_id,
+                    "entity_id": level2_id,  # Keeping entity_id for backward compatibility
+                    "name": record.get("name", "Unknown"),
+                    "cui": record.get("cui", ""),
+                    "definition": record.get("definition", ""),
+                    "semantic_types": semantic_types,  # Array of semantic types
+                    "semantic_type": semantic_type,  # Single semantic type field
+                    "icd": record.get("icd", ""),  # ICD code
+                    "entity_type": entity_type,  # Keeping entity_type for backward compatibility
+                    # Using definition as description for backward compatibility
+                    "description": record.get("definition", "")
+                }
+
+                # Adding Level 2 node to list if not already present
+                if level2_id and level2_id not in unique_level2_ids:
+                    level2_nodes.append(level2_data)
+                    unique_level2_ids.add(level2_id)
+
+                # Creating relationship data dictionary with actual relationship type from database
+                rel_id = f"{entity_id}_to_{level2_id}"
+                if rel_id and rel_id not in unique_relationship_ids:
+                    rel_data = {
+                        "source_id": entity_id,
+                        "target_id": level2_id,
+                        "target_name": record.get("name", "Unknown"),
+                        "source_name": level1_node.get("name", "Unknown"),
+                        "type": relationship_type,  # Using actual relationship type from database
+                        "description": f"{level1_node.get('name', 'Unknown')} {relationship_type.lower()} {record.get('name', 'Unknown')}"
+                    }
+
+                    relationships.append(rel_data)
+                    unique_relationship_ids.add(rel_id)
+
+        logger.info(
+            f"Retrieved {len(level2_nodes)} Level 2 nodes and {len(relationships)} relationships")
+        return level2_nodes, relationships
+
+    except Exception as e:
+        logger.error(f"Error retrieving Level 2 references: {str(e)}")
+        return [], []
+
+
+async def retrieve_level3_references(
+    level2_nodes: List[Dict[str, Any]],
+    neo4j_client: Neo4jClient,
+    max_references: int = 5
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Retrieve Level 3 nodes referenced by Level 2 nodes.
+    Matches Level2 nodes by their CUI to Level3 nodes where level2_node_id equals the CUI.
+
+    Args:
+        level2_nodes: List of Level 2 node dictionaries containing CUI
+        neo4j_client: Neo4j database client
+        max_references: Maximum number of references to retrieve per Level 2 node
+
+    Returns:
+        Tuple of (level3_nodes, relationships) lists
+    """
+    level3_nodes = []
+    relationships = []
+    unique_level3_ids = set()
+    unique_relationship_ids = set()
+
+    try:
+        for level2_node in level2_nodes:
+            # Extracting CUI from Level2 node, which should match level2_node_id in Level3
+            level2_cui = level2_node.get("cui")
+            if not level2_cui:
+                logger.debug(
+                    f"Level2 node {level2_node.get('name', 'Unknown')} has no CUI, skipping Level3 retrieval")
+                continue
+
+            # Retrieving Level 3 nodes where level2_node_id exactly matches the Level2 CUI
+            # Query matches Level3 nodes based on exact property match: level2_node_id = CUI
+            # Returns all Level3 node properties including patient information
+            query = """
+            MATCH (l3:Level3)
+            WHERE l3.level2_node_id = $level2_cui
+            RETURN l3.id AS id, l3.level2_node_id AS level2_node_id,
+                   l3.admission_info_json AS admission_info_json,
+                   l3.anchor_age AS anchor_age,
+                   l3.anchor_year AS anchor_year,
+                   l3.anchor_year_group AS anchor_year_group,
+                   l3.gender AS gender,
+                   l3.medications_json AS medications_json,
+                   l3.procedures_json AS procedures_json,
+                   l3.relevant_diagnoses_json AS relevant_diagnoses_json,
+                   l3.services_json AS services_json,
+                   l3.source AS source,
+                   l3.subject_id AS subject_id,
+                   l3.total_diagnoses_count AS total_diagnoses_count,
+                   l3.total_procedures_count AS total_procedures_count,
+                   l3.total_services_count AS total_services_count
+            LIMIT $limit
+            """
+
+            results = []
+            relationship_type = "RELATED_TO"
+
+            try:
+                results = await neo4j_client.execute_query(
+                    query,
+                    {"level2_cui": level2_cui, "limit": max_references}
+                )
+            except Exception as query_error:
+                logger.warning(
+                    f"Error querying Level3 nodes for CUI {level2_cui}: {query_error}")
+                continue
+
+            for record in results:
+                # Creating Level 3 node data dictionary with all properties
+                level3_id = record.get("id", "")
+
+                level3_data = {
+                    "id": level3_id,
+                    "entity_id": level3_id,  # Keeping entity_id for backward compatibility
+                    "level2_node_id": record.get("level2_node_id", ""),
+                    "admission_info_json": record.get("admission_info_json"),
+                    "anchor_age": record.get("anchor_age"),
+                    "anchor_year": record.get("anchor_year"),
+                    "anchor_year_group": record.get("anchor_year_group"),
+                    "gender": record.get("gender"),
+                    "medications_json": record.get("medications_json"),
+                    "procedures_json": record.get("procedures_json"),
+                    "relevant_diagnoses_json": record.get("relevant_diagnoses_json"),
+                    "services_json": record.get("services_json"),
+                    "source": record.get("source"),
+                    "subject_id": record.get("subject_id"),
+                    "total_diagnoses_count": record.get("total_diagnoses_count"),
+                    "total_procedures_count": record.get("total_procedures_count"),
+                    "total_services_count": record.get("total_services_count")
+                }
+
+                # Adding Level 3 node to list if not already present
+                if level3_id and level3_id not in unique_level3_ids:
+                    level3_nodes.append(level3_data)
+                    unique_level3_ids.add(level3_id)
+
+                # Creating relationship data dictionary
+                rel_id = f"{level2_cui}_to_{level3_id}"
+                if rel_id and rel_id not in unique_relationship_ids:
+                    # Using subject_id as name identifier for Level3
+                    level3_name = f"Patient {record.get('subject_id', 'Unknown')}"
+                    rel_data = {
+                        "source_id": level2_node.get("id", ""),
+                        "source_cui": level2_cui,
+                        "target_id": level3_id,
+                        "target_name": level3_name,
+                        "source_name": level2_node.get("name", "Unknown"),
+                        "type": relationship_type,
+                        "description": f"{level2_node.get('name', 'Unknown')} {relationship_type.lower()} {level3_name}"
+                    }
+
+                    relationships.append(rel_data)
+                    unique_relationship_ids.add(rel_id)
+
+        logger.info(
+            f"Retrieved {len(level3_nodes)} Level 3 nodes and {len(relationships)} relationships")
+        return level3_nodes, relationships
+
+    except Exception as e:
+        logger.error(f"Error retrieving Level 3 references: {str(e)}")
+        return [], []
+
+
+def format_retrieval_results(
+    level1_nodes: List[Dict[str, Any]],
+    level2_nodes: List[Dict[str, Any]],
+    relationships: List[Dict[str, Any]]
+) -> str:
+    """
+    Format the retrieval results into a more informative structured text representation.
+
+    Args:
+        level1_nodes: List of Level 1 node dictionaries
+        level2_nodes: List of Level 2 node dictionaries
+        relationships: List of relationship dictionaries
+
+    Returns:
+        Formatted text representation of the retrieved information
+    """
+    # Group Level 2 nodes by the Level 1 nodes that reference them
+    level1_to_level2 = {}
+
+    # Create a dictionary to quickly look up Level 2 nodes by name
+    level2_by_name = {node.get('name', 'Unknown')                      : node for node in level2_nodes}
+
+    # Group relationships by source entity ID
+    for rel in relationships:
+        source_id = rel.get('source_id')
+        target_name = rel.get('target_name')
+
+        if source_id and target_name:
+            if source_id not in level1_to_level2:
+                level1_to_level2[source_id] = []
+
+            # Add the target Level 2 node to the list if it exists
+            if target_name in level2_by_name:
+                level1_to_level2[source_id].append({
+                    'name': target_name,
+                    'node': level2_by_name[target_name],
+                    'relationship': rel
+                })
+
+    # Format the text with each Level 1 node and its related Level 2 nodes
+    sections = []
+
+    # Add main content section with detailed information
+    main_content = []
+
+    for level1_node in level1_nodes:
+        # Using 'id' as the primary identifier matching the actual node structure
+        entity_id = level1_node.get('id') or level1_node.get('entity_id')
+        entity_name = level1_node.get('name', 'Unknown').upper()
+        # Use semantic_type if available (actual field in Neo4j), fallback to entity_type for backward compatibility
+        entity_type = level1_node.get(
+            'semantic_type') or level1_node.get('entity_type', 'Unknown')
+        # Description field not present in actual node structure
+        entity_desc = level1_node.get('description', '')
+
+        # Add Level 1 node info
+        node_section = [
+            f"## {entity_name} ({entity_type})",
+        ]
+        if entity_desc:
+            node_section.append(f"{entity_desc}")
+        node_section.append("")
+
+        # Add related Level 2 nodes if any
+        related_nodes = level1_to_level2.get(entity_id, [])
+        if related_nodes:
+            node_section.append(f"### Related Concepts:")
+            for item in related_nodes:
+                level2_node = item['node']
+                level2_name = level2_node.get('name', 'Unknown')
+                level2_cui = level2_node.get('cui', '')
+                level2_definition = level2_node.get(
+                    'definition', '') or level2_node.get('description', '')
+                semantic_types = level2_node.get('semantic_types', [])
+                level2_type = semantic_types[0] if semantic_types else level2_node.get(
+                    'entity_type', 'CONCEPT')
+
+                # Formatting Level 2 node information
+                # Displaying CUI if available
+                cui_str = f" (CUI: {level2_cui})" if level2_cui else ""
+
+                if level2_definition:
+                    # Truncate very long definitions
+                    if len(level2_definition) > 300:
+                        level2_definition = level2_definition[:297] + "..."
+                    node_section.append(
+                        f"* **{level2_name}**{cui_str} ({level2_type}): {level2_definition}")
+                else:
+                    node_section.append(
+                        f"* **{level2_name}**{cui_str} ({level2_type})")
+
+            node_section.append("")
+
+        main_content.extend(node_section)
+
+    # Create a key concepts summary section
+    concept_summary = ["# KEY CONCEPTS", ""]
+
+    # Group Level 1 nodes by entity type
+    entity_types = {}
+    for node in level1_nodes:
+        # Use semantic_type if available (actual field in Neo4j), fallback to entity_type for backward compatibility
+        entity_type = node.get('semantic_type') or node.get(
+            'entity_type', 'Unknown')
+        if entity_type not in entity_types:
+            entity_types[entity_type] = []
+        entity_types[entity_type].append(node)
+
+    # Add a summary for each entity type
+    for entity_type, nodes in entity_types.items():
+        concept_summary.append(f"## {entity_type.upper()}S")
+        for node in nodes:
+            name = node.get('name', 'Unknown')
+            desc = node.get('description', '')
+            # Creating short description from first sentence or truncating, or displaying only name if no description
+            if desc:
+                short_desc = desc.split('.')[0] if '.' in desc else desc[:50]
+                concept_summary.append(f"* **{name}**: {short_desc}")
+            else:
+                concept_summary.append(f"* **{name}**")
+        concept_summary.append("")
+
+    # Add a relationships summary
+    relationship_summary = ["# RELATIONSHIPS", ""]
+
+    # Group relationships by type
+    rel_types = {}
+    for rel in relationships:
+        rel_type = rel.get('type', 'RELATED_TO')
+        if rel_type not in rel_types:
+            rel_types[rel_type] = []
+        rel_types[rel_type].append(rel)
+
+    # Add a summary for each relationship type
+    for rel_type, rels in rel_types.items():
+        relationship_summary.append(f"## {rel_type}")
+        # List only unique source-target pairs to avoid repetition
+        unique_pairs = set()
+        for rel in rels:
+            source = rel.get('source_name', 'Unknown')
+            target = rel.get('target_name', 'Unknown')
+            pair = f"{source} → {target}"
+            if pair not in unique_pairs:
+                unique_pairs.add(pair)
+                relationship_summary.append(f"* {pair}")
+        relationship_summary.append("")
+
+    # Combine all sections
+    sections.append("\n".join(concept_summary))
+    sections.append("\n".join(relationship_summary))
+    sections.append("# DETAILED INFORMATION\n")
+    sections.append("\n".join(main_content))
+
+    return "\n".join(sections)

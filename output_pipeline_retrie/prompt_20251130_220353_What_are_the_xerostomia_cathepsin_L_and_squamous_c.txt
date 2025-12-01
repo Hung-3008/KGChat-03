@@ -1,0 +1,176 @@
+================================================================================
+PROMPT READY FOR LLM (Copy phần dưới để sử dụng)
+================================================================================
+
+---Role---
+
+You are a helpful assistant responding to user query about Knowledge Base provided below.
+
+---Goal---
+
+Generate a concise response based on Knowledge Base and follow Response Rules, considering both the conversation history and the current query. Summarize all information in the provided Knowledge Base, and incorporating general knowledge relevant to the Knowledge Base. Do not include information not provided by Knowledge Base.
+
+---Conversation History---
+(No previous conversation)
+
+---User Query---
+What are the xerostomia, cathepsin L and squamous cell carcinoma?
+
+---Knowledge Base---
+
+# KEY CONCEPTS
+
+## PHENOMENON_OR_PROCESSS
+* **skewed cell division distributions in E. coli**
+* **No16966**
+
+## PHARMACOLOGIC_SUBSTANCES
+* **C21/M024 (D)**
+
+## MOLECULAR_BIOLOGY_RESEARCH_TECHNIQUES
+* **dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH)**
+
+## HEALTH_CARE_RELATED_ORGANIZATIONS
+* **Soonchunhyang University Hospital**
+* **Pusan National University Hospital**
+
+## PHYSIOLOGIC_FUNCTIONS
+* **triglyceride hydrolase activity**
+
+## S
+* **The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon**
+
+## MANUFACTURED_OBJECTS
+* **diode laser K81S09F**
+
+## DISEASE_OR_SYNDROMES
+* **elastofibroma dorsi**
+
+# RELATIONSHIPS
+
+## REF_TO
+* skewed cell division distributions in E. coli → e coli infection
+* skewed cell division distributions in E. coli → infections e coli
+* skewed cell division distributions in E. coli → infection e coli
+* C21/M024 (D) → ibd21
+* C21/M024 (D) → iddm21
+* C21/M024 (D) → cyp21 deficiency
+* dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH) → x inactivation familial skewed 2
+* dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH) → er negative pr negative her2 negative breast neoplasms
+* dual-color chromogenic in situ hybridization (INFORM HER2 Dual ISH) → er negative pr negative her2 negative breast cancer
+* No16966 → eds6b formerly
+* No16966 → eds6
+* No16966 → eds6a formerly
+* Soonchunhyang University Hospital → nguyen syndrome
+* Soonchunhyang University Hospital → tang hsi ryu syndrome
+* Soonchunhyang University Hospital → yin hsu
+* triglyceride hydrolase activity → hypertriglyceridemias
+* triglyceride hydrolase activity → hypertriglyceridemia familial
+* triglyceride hydrolase activity → cholesterol ester hydrolase deficiency
+* Pusan National University Hospital → nguyen syndrome
+* Pusan National University Hospital → san luis valley syndrome
+* Pusan National University Hospital → tang hsi ryu syndrome
+* The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon → charcot marie tooth disease type 2d
+* The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon → charcot marie tooth disease type i
+* The occurrence of CHH in the same dental arch in a healthy patient is most likely to be a rare phenomenon → charcot marie tooth disease dominant intermediate a
+* diode laser K81S09F → burn electric
+* diode laser K81S09F → x ray nk sensitivity
+* diode laser K81S09F → cmd1z
+* elastofibroma dorsi → dermatofibroma
+* elastofibroma dorsi → erythrokeratodermia figurata variabili
+* elastofibroma dorsi → dermatofibromas
+
+# DETAILED INFORMATION
+
+## SKEWED CELL DIVISION DISTRIBUTIONS IN E. COLI (Phenomenon_or_Process)
+
+### Related Concepts:
+* **e coli infection** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infections e coli** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+* **infection e coli** (CUI: C0014836) (CONCEPT): Infections with bacteria of the species ESCHERICHIA COLI.
+
+## C21/M024 (D) (Pharmacologic_Substance)
+
+### Related Concepts:
+* **ibd21** (CUI: 612354) (CONCEPT)
+* **iddm21** (CUI: C2675865) (CONCEPT)
+* **cyp21 deficiency** (CUI: 201910) (CONCEPT)
+
+## DUAL-COLOR CHROMOGENIC IN SITU HYBRIDIZATION (INFORM HER2 DUAL ISH) (Molecular_Biology_Research_Technique)
+
+### Related Concepts:
+* **x inactivation familial skewed 2** (CUI: C1846257) (CONCEPT)
+* **er negative pr negative her2 negative breast neoplasms** (CUI: C3539878) (CONCEPT): Breast neoplasms that do not express ESTROGEN RECEPTORS; PROGESTERONE RECEPTORS; and do not overexpress the NEU RECEPTOR/HER-2 PROTO-ONCOGENE PROTEIN.
+* **er negative pr negative her2 negative breast cancer** (CUI: C3539878) (CONCEPT): Breast neoplasms that do not express ESTROGEN RECEPTORS; PROGESTERONE RECEPTORS; and do not overexpress the NEU RECEPTOR/HER-2 PROTO-ONCOGENE PROTEIN.
+
+## NO16966 (Phenomenon_or_Process)
+
+### Related Concepts:
+* **eds6b formerly** (CUI: 601776) (CONCEPT)
+* **eds6** (CUI: 225400) (CONCEPT)
+* **eds6a formerly** (CUI: 225400) (CONCEPT)
+
+## SOONCHUNHYANG UNIVERSITY HOSPITAL (Health_Care_Related_Organization)
+
+### Related Concepts:
+* **nguyen syndrome** (CUI: C1864823) (CONCEPT)
+* **tang hsi ryu syndrome** (CUI: C2931363) (CONCEPT)
+* **yin hsu** (CUI: C0085257) (CONCEPT): In the YIN-YANG system of philosophy and medicine, an insufficiency of body fluid (called yinxu), manifesting often as irritability, thirst, constipation, etc. (The Pinyin Chinese-English Dictionary, 1979).
+
+## TRIGLYCERIDE HYDROLASE ACTIVITY (Physiologic_Function)
+
+### Related Concepts:
+* **hypertriglyceridemias** (CUI: C0020557) (CONCEPT): A condition of elevated levels of TRIGLYCERIDES in the blood.
+* **hypertriglyceridemia familial** (CUI: C0020480) (CONCEPT): A hypertriglyceridemia disorder, often with autosomal dominant inheritance. It is characterized by the persistent elevations of plasma TRIGLYCERIDES, endogenously synthesized and contained predominantly in VERY-LOW-DENSITY LIPOPROTEINS (pre-beta lipoproteins). In contrast, the plasma CHOLESTEROL ...
+* **cholesterol ester hydrolase deficiency** (CUI: C531854) (CONCEPT)
+
+## PUSAN NATIONAL UNIVERSITY HOSPITAL (Health_Care_Related_Organization)
+
+### Related Concepts:
+* **nguyen syndrome** (CUI: C1864823) (CONCEPT)
+* **san luis valley syndrome** (CUI: C0795822) (CONCEPT): Recombinant chromosome 8 with developmental delay, minor facial anomalies, eye abnormalities, high frequency otitis media and hearing loss, congenital heart disease, and genitourinary anomalies. All thus far observed cases have been in patients of Hispanic origin in south-western United States.
+* **tang hsi ryu syndrome** (CUI: C2931363) (CONCEPT)
+
+## THE OCCURRENCE OF CHH IN THE SAME DENTAL ARCH IN A HEALTHY PATIENT IS MOST LIKELY TO BE A RARE PHENOMENON ()
+
+### Related Concepts:
+* **charcot marie tooth disease type 2d** (CUI: 601472) (CONCEPT)
+* **charcot marie tooth disease type i** (CUI: C0007959) (CONCEPT): A hereditary motor and sensory neuropathy transmitted most often as an autosomal dominant trait and characterized by progressive distal wasting and loss of reflexes in the muscles of the legs (and occasionally involving the arms). Onset is usually in the second to fourth decade of life. This cond...
+* **charcot marie tooth disease dominant intermediate a** (CUI: 606483) (CONCEPT)
+
+## DIODE LASER K81S09F (Manufactured_Object)
+
+### Related Concepts:
+* **burn electric** (CUI: C0006436) (CONCEPT): Burns produced by contact with electric current or from a sudden discharge of electricity.
+* **x ray nk sensitivity** (CUI: C1839408) (CONCEPT)
+* **cmd1z** (CUI: 611879) (CONCEPT)
+
+## ELASTOFIBROMA DORSI (Disease_or_Syndrome)
+
+### Related Concepts:
+* **dermatofibroma** (CUI: C0206644) (CONCEPT): A benign tumor composed, wholly or in part, of cells with the morphologic characteristics of HISTIOCYTES and with various fibroblastic components. Fibrous histiocytomas can occur anywhere in the body. When they occur in the skin, they are called dermatofibromas or sclerosing hemangiomas. (From De...
+* **erythrokeratodermia figurata variabili** (CUI: C1851480) (CONCEPT): A rare, isolated, diffuse palmoplantar keratoderma disorder characterized by red-yellow, moderate to severe hyperkeratosis of the palms and soles, extending to the dorsal aspects of the hands, feet and/or wrists and involving the skin over the Achilles' tendon (transgrediens), gradually worsening...
+* **dermatofibromas** (CUI: C0002991) (CONCEPT): A slowly growing benign skin nodule consisting of poorly demarcated cellular fibrous tissue enclosing collapsed CAPILLARIES with scattered HEMOSIDERIN-pigmented and lipid MACROPHAGES. They are common, usually about 1 cm in diameter and occur in the DERMIS. (From Stedman, 25th ed; DeVita Jr et al....
+
+
+---Response Rules---
+
+- Target format and length: comprehensive and detailed
+- Use markdown formatting with appropriate section headings
+- Please respond in the same language as the user's question
+- Ensure the response maintains continuity with the conversation history
+- List up to 5 most important reference sources at the end under "References" section
+- If you don't know the answer, just say so
+- Do not make anything up. Do not include information not provided by the Knowledge Base
+
+================================================================================
+METADATA (For reference only)
+================================================================================
+Timestamp: 2025-11-30 22:03:53
+Intent: HEALTHCARE_RELATED
+High-level keywords: Medical conditions, Biological compounds, Cancer types, Oral health, Cellular biology
+Low-level keywords: Xerostomia, Cathepsin L, Squamous cell carcinoma
+Retrieval Statistics:
+  - Level 1 nodes: 10
+  - Level 2 nodes: 28
+  - Relationships: 30
