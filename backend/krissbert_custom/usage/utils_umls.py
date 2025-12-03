@@ -124,6 +124,9 @@ def generate_vectors(
     batch_size: int,
     max_length: int,
     is_prototype: bool = False,
+    start_index: int = 0,
+    duck_con=None,
+    duck_query: str = None,
 ):
     """
     Encode UMLS concepts into dense vectors.
@@ -145,108 +148,156 @@ def generate_vectors(
     device = next(encoder.parameters()).device
     
     # Flatten all aliases from all concepts
+    # If using DuckDB, we don't need to flatten manually, the query should return flat aliases
     all_alias_data = []
-    for idx in range(len(dataset)):
-        concept = dataset[idx]
-        for alias_idx, alias in enumerate(concept.aliases):
-            all_alias_data.append({
-                'concept': concept,
-                'alias': alias,
-                'alias_idx': alias_idx
-            })
     
-    n = len(all_alias_data)
-    total = 0
+    if duck_con and duck_query:
+        # We will iterate cursor directly, so we don't build all_alias_data
+        pass
+    else:
+        for idx in range(len(dataset)):
+            concept = dataset[idx]
+            for alias_idx, alias in enumerate(concept.aliases):
+                all_alias_data.append({
+                    'concept': concept,
+                    'alias': alias,
+                    'alias_idx': alias_idx
+                })
+    
+    if duck_con and duck_query:
+        # For DuckDB, we assume the query returns (cui, stn, type, alias)
+        # We can't easily know 'n' without a count query, but we can just iterate.
+        n = "Unknown" 
+        total = start_index
+    else:
+        n = len(all_alias_data)
+        total = start_index
     start_time = time.time()
     
     logger.info("=" * 80)
     logger.info(f"Start encoding UMLS aliases...")
-    logger.info(f"Total concepts: {len(dataset)}")
+    if dataset:
+        logger.info(f"Total concepts: {len(dataset)}")
+    else:
+        logger.info(f"Total concepts: Unknown (Streaming from DuckDB)")
     logger.info(f"Total aliases: {n}")
     logger.info(f"Batch size: {batch_size}")
     logger.info("=" * 80)
     
-    for i, batch_start in enumerate(range(0, n, batch_size)):
-        # Get batch of alias data
-        batch_data = all_alias_data[batch_start:min(n, batch_start + batch_size)]
-        
-        # Encode each alias
-        batch_tensors = []
-        for item in batch_data:
-            concept = item['concept']
-            alias = item['alias']
-            
-            # Create ContextualUMLS with single alias
-            single_alias_concept = ContextualUMLS(
-                cui=concept.cui,
-                stn=concept.stn,
-                Type=concept.Type,
-                aliases=[alias]  # Only this one alias
-            )
-            
-            # Get tensor for this alias
-            tensors = single_alias_concept.to_tensors(tokenizer, max_length)
-            if tensors:
-                batch_tensors.append(tensors[0])
-            else:
-                # Fallback to zero tensor
-                batch_tensors.append(torch.zeros(max_length, dtype=torch.long))
-        
-        if not batch_tensors:
-            continue
-        
-        # Stack and move to device
-        ids_batch = torch.stack(batch_tensors, dim=0).to(device)
-        seg_batch = torch.zeros_like(ids_batch)
-        attn_mask = (ids_batch != tokenizer.pad_token_id)
-        
-        # Encode
-        with torch.inference_mode():
-            out = encoder(input_ids=ids_batch, token_type_ids=seg_batch, attention_mask=attn_mask)
-            out = out[0][:, 0, :]  # [CLS] token
-        out = out.cpu()
-        
-        num = out.size(0)
-        total += num
-        
-        # Store results
-        if is_prototype:
-            meta = [
-                {
-                    'cui': item['concept'].cui,
-                    'stn': item['concept'].stn,
-                    'type': item['concept'].Type,
-                    'alias': item['alias'],
-                    'alias_idx': item['alias_idx']
-                }
-                for item in batch_data
-            ]
-            batch_results = [(meta[j], out[j].view(-1).numpy()) for j in range(num)]
-        else:
-            batch_results = out.cpu().split(1, dim=0)
-            # If not prototype, we might want to stack them if the caller expects tensors
-            # But for consistency with generator pattern, yielding list/tensor batch is fine.
-            # However, the original code returned a single concatenated tensor.
-            # If we change this to generator, we break compatibility with code expecting a single return.
-            # But `generate_prototypes.py` is the only consumer we care about right now.
-            # Let's check `run_entity_linking.py` usage of `generate_vectors`.
-            # `run_entity_linking.py` calls `retriever.generate_mention_vectors(ds)` which calls `generate_vectors`.
-            # It expects a single Tensor.
-            # So we should probably keep `generate_vectors` as is for compatibility, or add a `stream=True` flag.
-            # Given the instruction was to refactor, I will add a generator but wrap it for backward compatibility if needed.
-            # Actually, `run_entity_linking.py` loads test data which is small, so it fits in RAM.
-            # `generate_prototypes.py` loads UMLS which is huge.
-            # So I will modify `generate_vectors` to be a generator, and update `run_entity_linking.py` to consume it fully if needed.
-        
-        yield batch_results
-        
-        # Log progress
-        if (i + 1) % 10 == 0:
-            eta = (n - total) * (time.time() - start_time) / 60 / total if total > 0 else 0
-            logger.info(f"Batch={i+1}, Encoded={total}/{n} aliases, ETA={eta:.1f}m")
+    logger.info(f"Resuming from index {start_index}..." if start_index > 0 else "Starting from beginning...")
     
+    if duck_con and duck_query:
+        # Execute query using a separate cursor to avoid interference
+        cursor = duck_con.cursor()
+        cursor.execute(duck_query)
+        
+        while True:
+            # Fetch batch
+            rows = cursor.fetchmany(batch_size)
+            if not rows:
+                break
+                
+            batch_data = []
+            for row in rows:
+                # row: (cui, stn, type, alias)
+                # We need to construct 'concept' object or similar structure expected below
+                # The code below expects item['concept'] with .cui, .stn, .Type attributes
+                # and item['alias']
+                
+                cui, stn, type_, alias = row
+                
+                # Create a dummy concept object
+                @dataclass
+                class SimpleConcept:
+                    cui: str
+                    stn: str
+                    Type: str
+                
+                concept = SimpleConcept(cui=cui, stn=stn, Type=type_)
+                
+                batch_data.append({
+                    'concept': concept,
+                    'alias': alias,
+                    'alias_idx': 0 # Dummy index, not used for vectors
+                })
+            
+            # Process batch (shared logic)
+            yield from process_batch(batch_data, encoder, tokenizer, max_length, device, is_prototype)
+            
+            total += len(rows)
+            if total % 1000 == 0:
+                 logger.info(f"Encoded {total} aliases...")
+
+    else:
+        for i, batch_start in enumerate(range(start_index, n, batch_size)):
+            # Get batch of alias data
+            batch_data = all_alias_data[batch_start:min(n, batch_start + batch_size)]
+            yield from process_batch(batch_data, encoder, tokenizer, max_length, device, is_prototype)
+            
+            # Log progress
+            if (i + 1) % 10 == 0:
+                eta = (n - total) * (time.time() - start_time) / 60 / total if total > 0 else 0
+                logger.info(f"Batch={i+1}, Encoded={total}/{n} aliases, ETA={eta:.1f}m")
+
     logger.info("=" * 80)
     logger.info(f"✅ Encoding completed!")
-    logger.info(f"Total aliases encoded: {n}")
+    logger.info(f"Total aliases encoded: {total}")
     logger.info(f"Total time: {(time.time() - start_time) / 60:.2f}m")
     logger.info("=" * 80)
+
+def process_batch(batch_data, encoder, tokenizer, max_length, device, is_prototype):
+    # Encode each alias
+    batch_tensors = []
+    for item in batch_data:
+        concept = item['concept']
+        alias = item['alias']
+        
+        # Create ContextualUMLS with single alias
+        single_alias_concept = ContextualUMLS(
+            cui=concept.cui,
+            stn=concept.stn,
+            Type=concept.Type,
+            aliases=[alias]  # Only this one alias
+        )
+        
+        # Get tensor for this alias
+        tensors = single_alias_concept.to_tensors(tokenizer, max_length)
+        if tensors:
+            batch_tensors.append(tensors[0])
+        else:
+            # Fallback to zero tensor
+            batch_tensors.append(torch.zeros(max_length, dtype=torch.long))
+    
+    if not batch_tensors:
+        return
+    
+    # Stack and move to device
+    ids_batch = torch.stack(batch_tensors, dim=0).to(device)
+    seg_batch = torch.zeros_like(ids_batch)
+    attn_mask = (ids_batch != tokenizer.pad_token_id)
+    
+    # Encode
+    with torch.inference_mode():
+        out = encoder(input_ids=ids_batch, token_type_ids=seg_batch, attention_mask=attn_mask)
+        out = out[0][:, 0, :]  # [CLS] token
+    out = out.cpu()
+    
+    num = out.size(0)
+    
+    # Store results
+    if is_prototype:
+        meta = [
+            {
+                'cui': item['concept'].cui,
+                'stn': item['concept'].stn,
+                'type': item['concept'].Type,
+                'alias': item['alias'],
+                'alias_idx': item['alias_idx']
+            }
+            for item in batch_data
+        ]
+        batch_results = [(meta[j], out[j].view(-1).numpy()) for j in range(num)]
+    else:
+        batch_results = out.cpu().split(1, dim=0)
+    
+    yield batch_results

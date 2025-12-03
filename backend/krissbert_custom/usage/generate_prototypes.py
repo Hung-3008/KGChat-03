@@ -56,10 +56,14 @@ def run_processing(cfg: DictConfig, dataset=None):
     encoder.cuda()
     encoder.eval()
 
-    if dataset is None:
-        ds = hydra.utils.instantiate(cfg.train_data)
-    else:
-        ds = dataset
+    # ds instantiation removed to use DuckDB streaming
+    json_path = cfg.train_data.UMLS_path
+    
+    # Initialize DuckDB connections
+    # One for streaming (read_json_auto) - Use in-memory DB to avoid lock contention
+    duck_con_stream = duckdb.connect() 
+    # One for lookups (mrdef, mrconso, etc)
+    duck_con_lookup = duckdb.connect('/media/hung/data1/codes/projects/FHC/data/umls.duckdb', read_only=True)
     
     # Check output path
     output_dir = os.path.dirname(cfg.output_prototypes)
@@ -70,33 +74,103 @@ def run_processing(cfg: DictConfig, dataset=None):
     qdrant = QdrantHelper()
     collection_name = "kg_lv2_nodes"
     
-    # Check if clear is requested
-    if cfg.get("clear", False):
-        logger.info(f"Clearing collection '{collection_name}' as requested...")
-        qdrant.clear_collection(collection_name)
+    # Determine start index and file mode
+    start_index = 0
+    file_mode = 'w'
+    
+    if cfg.get("resume", False):
+        logger.info("Resume requested. Checking Qdrant collection count...")
+        start_index = qdrant.get_collection_count(collection_name)
+        if start_index > 0:
+            file_mode = 'a'
+            logger.info(f"Found {start_index} existing records in Qdrant. Resuming...")
+        else:
+            logger.info("Collection is empty or does not exist. Starting from scratch...")
+            qdrant.create_collection(collection_name, vector_size=768)
+    else:
+        logger.info("Starting from scratch...")
+        if cfg.get("clear", False):
+             logger.info(f"Clearing collection '{collection_name}' as requested...")
+             qdrant.clear_collection(collection_name)
         
-    qdrant.create_collection(collection_name, vector_size=768)
+        # Ensure collection exists
+        qdrant.create_collection(collection_name, vector_size=768)
 
-    # Initialize DuckDB
-    duck_con = duckdb.connect('/media/hung/data1/codes/projects/FHC/data/umls.duckdb', read_only=True)
-
-    iterator = generate_vectors(encoder, tokenizer, ds, cfg.batch_size, cfg.max_length, is_prototype=True)
+    # Construct DuckDB query
+    duck_query = f"SELECT cui, stn, type, unnest(aliases) as alias FROM read_json_auto('{json_path}') OFFSET {start_index}"
+    
+    iterator = generate_vectors(
+        encoder, tokenizer, dataset=None, batch_size=cfg.batch_size, 
+        max_length=cfg.max_length, is_prototype=True, start_index=start_index,
+        duck_con=duck_con_stream, duck_query=duck_query
+    )
     
     # Open name_cuis file once and write
     logger.info(f"Streaming embeddings to Qdrant collection '{collection_name}'...")
     
     total_processed = 0
     
-    # Use tqdm for progress tracking
-    # Note: generate_vectors is a generator, so we might not know total length easily unless we calculate it.
-    # But we can wrap it in tqdm without total or estimate it.
-    # Since we know batch_size and total items (roughly), we can try to pass total if available.
-    # For now, just a simple tqdm wrapper.
-    
-    with open(cfg.output_name_cuis, 'w') as f_names:
+    # Thread pool for async Qdrant insertion
+    from concurrent.futures import ThreadPoolExecutor
+    executor = ThreadPoolExecutor(max_workers=2)
+    futures = []
+
+    def insert_batch_to_qdrant(collection, points_batch):
+        try:
+            qdrant.insert_points(collection, points_batch)
+            return len(points_batch)
+        except Exception as e:
+            logger.error(f"Error inserting batch to Qdrant: {e}")
+            return 0
+
+    with open(cfg.output_name_cuis, file_mode) as f_names:
         for batch in tqdm(iterator, desc="Processing batches"):
             points = []
+            cuis = [m['cui'] for m, _ in batch]
+            unique_cuis = list(set(cuis))
             
+            if not unique_cuis:
+                continue
+
+            # Batch DuckDB Lookups
+            # Prepare placeholders for IN clause
+            placeholders = ','.join(['?'] * len(unique_cuis))
+            
+            # 1. Definition (Prioritize MSH, NCI)
+            def_query = f"""
+                SELECT CUI, DEF 
+                FROM (
+                    SELECT CUI, DEF, 
+                           ROW_NUMBER() OVER (PARTITION BY CUI ORDER BY CASE WHEN SAB IN ('MSH', 'NCI') THEN 0 ELSE 1 END) as rn
+                    FROM mrdef
+                    WHERE CUI IN ({placeholders})
+                ) WHERE rn = 1
+            """
+            res_def = duck_con_lookup.execute(def_query, unique_cuis).fetchall()
+            def_map = {r[0]: r[1] for r in res_def}
+
+            # 2. ICD Code
+            icd_query = f"""
+                SELECT CUI, CODE 
+                FROM (
+                    SELECT CUI, CODE,
+                           ROW_NUMBER() OVER (PARTITION BY CUI ORDER BY CODE) as rn
+                    FROM mrconso
+                    WHERE CUI IN ({placeholders}) AND SAB LIKE 'ICD%'
+                ) WHERE rn = 1
+            """
+            res_icd = duck_con_lookup.execute(icd_query, unique_cuis).fetchall()
+            icd_map = {r[0]: r[1] for r in res_icd}
+
+            # 3. Semantic Types
+            sty_query = f"SELECT CUI, STY FROM mrsty WHERE CUI IN ({placeholders})"
+            res_sty = duck_con_lookup.execute(sty_query, unique_cuis).fetchall()
+            sty_map = {}
+            for r in res_sty:
+                if r[0] not in sty_map:
+                    sty_map[r[0]] = []
+                sty_map[r[0]].append(r[1])
+
             # Process batch
             for metadata, vector in batch:
                 cui = metadata['cui']
@@ -105,33 +179,9 @@ def run_processing(cfg: DictConfig, dataset=None):
                 # Write to name_cuis file
                 f_names.write(f"{cui}||{alias}\n")
                 
-                # Fetch info from DuckDB
-                # 1. Definition (Prioritize MSH, NCI, then any)
-                # MRDEF: CUI, SAB, DEF
-                def_query = """
-                    SELECT DEF FROM mrdef 
-                    WHERE CUI = ? 
-                    ORDER BY CASE WHEN SAB IN ('MSH', 'NCI') THEN 0 ELSE 1 END 
-                    LIMIT 1
-                """
-                res_def = duck_con.execute(def_query, [cui]).fetchone()
-                definition = res_def[0] if res_def else None
-                
-                # 2. ICD Code
-                # MRCONSO: CUI, SAB, CODE
-                icd_query = """
-                    SELECT CODE FROM mrconso 
-                    WHERE CUI = ? AND SAB LIKE 'ICD%' 
-                    LIMIT 1
-                """
-                res_icd = duck_con.execute(icd_query, [cui]).fetchone()
-                icd_code = res_icd[0] if res_icd else None
-                
-                # 3. Semantic Types
-                # MRSTY: CUI, STY
-                sty_query = "SELECT STY FROM mrsty WHERE CUI = ?"
-                res_sty = duck_con.execute(sty_query, [cui]).fetchall()
-                semantic_types = [r[0] for r in res_sty] if res_sty else []
+                definition = def_map.get(cui)
+                icd_code = icd_map.get(cui)
+                semantic_types = sty_map.get(cui, [])
                 
                 # Create Qdrant point
                 point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{cui}_{alias}"))
@@ -150,17 +200,23 @@ def run_processing(cfg: DictConfig, dataset=None):
                     "payload": payload
                 })
             
-            # Insert batch to Qdrant
+            # Insert batch to Qdrant asynchronously
             if points:
-                qdrant.insert_points(collection_name, points)
+                future = executor.submit(insert_batch_to_qdrant, collection_name, points)
+                futures.append(future)
+                # Clean up finished futures to avoid memory leak
+                futures = [f for f in futures if not f.done()]
+                
                 total_processed += len(points)
             
-            # Log progress - removed custom logging in favor of tqdm
-            # if total_processed % 1000 == 0:
-            #     logger.info(f"Processed and inserted {total_processed} records...")
+    # Wait for all insertions to complete
+    for f in futures:
+        f.result()
 
     logger.info(f"Successfully processed and inserted {total_processed} records into Qdrant.")
-    duck_con.close()
+    executor.shutdown()
+    duck_con_stream.close()
+    duck_con_lookup.close()
 
 
 @hydra.main(config_path="conf", config_name="generate_prototypes", version_base=None)

@@ -108,3 +108,5 @@ package-lock.json
 wget-log
 storage/
 .qdrant-initialized
+backups/*
+qdrant_snapshots/*

@@ -3,6 +3,9 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from typing import List, Dict
 import logging
+import time
+import httpx
+from qdrant_client.http.exceptions import ResponseHandlingException
 
 logger = logging.getLogger("qdrant_helper")
 
@@ -12,7 +15,7 @@ class QdrantHelper:
         api_key = os.getenv("QDRANT_API_KEY", None)
         
         try:
-            self.client = QdrantClient(url=url, api_key=api_key, timeout=120)
+            self.client = QdrantClient(url=url, api_key=api_key, timeout=600)
             logger.info("Connected to Qdrant")
         except Exception as e:
             logger.error(f"Failed to connect to Qdrant: {e}")
@@ -64,17 +67,32 @@ class QdrantHelper:
         if not points:
             return
 
-        self.client.upsert(
-            collection_name=collection_name,
-            points=[
-                models.PointStruct(
-                    id=point['id'],
-                    vector=point['vector'],
-                    payload=point.get('payload', {})
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                self.client.upsert(
+                    collection_name=collection_name,
+                    points=[
+                        models.PointStruct(
+                            id=point['id'],
+                            vector=point['vector'],
+                            payload=point.get('payload', {})
+                        )
+                        for point in points
+                    ]
                 )
-                for point in points
-            ]
-        )
+                return  # Success
+            except (ResponseHandlingException, httpx.ReadTimeout) as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    logger.warning(f"Insert failed (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Insert failed after {max_retries} attempts: {e}")
+                    raise
+            except Exception as e:
+                logger.error(f"Unexpected error during insert: {e}")
+                raise
 
     def search(self, collection_name: str, query_vector: List[float], limit: int = 5, score_threshold: float = 0.65) -> List[Dict]:
         """
@@ -105,3 +123,13 @@ class QdrantHelper:
         except Exception as e:
             logger.error(f"Search failed: {e}")
             return []
+            
+    def get_collection_count(self, collection_name: str) -> int:
+        """Returns the number of points in the collection."""
+        try:
+            count_result = self.client.count(collection_name=collection_name)
+            return count_result.count
+        except Exception as e:
+            logger.error(f"Failed to get collection count: {e}")
+            return 0
+
