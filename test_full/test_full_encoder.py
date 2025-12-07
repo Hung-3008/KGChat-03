@@ -64,11 +64,9 @@ async def initialize_clients():
     # 2. Khởi tạo Transformer Encoder
     print("\n📌 Khởi tạo Transformer Encoder...")
     try:
-        # Khởi tạo Transformer Encoder với target_dimension mặc định 768
         transformer_encoder = TransformerEncoder(
             model_name="NeuML/pubmedbert-base-embeddings",
-            device="cpu",
-            target_dimension=768
+            device="cpu"
         )
 
         # Sử dụng trực tiếp TransformerEncoder
@@ -123,20 +121,10 @@ async def initialize_clients():
                                         collection_dimension = vec_config.size
                                         break
 
-                # Cập nhật target_dimension cho encoder
                 if collection_dimension:
                     print(f"   - Vector dimension: {collection_dimension}")
-                else:
-                    print("   - Sử dụng dimension mặc định: 768")
-                    collection_dimension = 768
-
-                if clients.get("ollama_client"):
-                    clients["ollama_client"].target_dimension = collection_dimension
-                    print(
-                        f"   - Đã cập nhật embedding dimension: {collection_dimension}")
             except Exception as e:
                 print(f"   ⚠️  Lỗi lấy thông tin collection: {e}")
-                collection_dimension = 768
 
         clients["qdrant_client"] = qdrant_client
     except Exception as e:

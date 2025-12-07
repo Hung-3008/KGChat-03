@@ -11,8 +11,7 @@ class TransformerEncoder:
     def __init__(
         self,
         model_name: Optional[str] = "NeuML/pubmedbert-base-embeddings",
-        device: Optional[str] = "cpu",
-        target_dimension: Optional[int] = None
+        device: Optional[str] = "cpu"
     ):
         self.model_name = model_name
         self.device_str = device or "cpu"
@@ -20,7 +19,6 @@ class TransformerEncoder:
             self.device_str == "cpu" or torch.cuda.is_available()) else "cpu")
         self._tokenizer: Optional[AutoTokenizer] = None
         self._model: Optional[AutoModel] = None
-        self.target_dimension = target_dimension
 
     def _ensure_model_loaded(self) -> None:
         if self._tokenizer is None or self._model is None:
@@ -79,28 +77,9 @@ class TransformerEncoder:
         tensor = self.embed(texts, **kwargs)
         return tensor.numpy()
 
-    def _resize_embedding(self, embedding: List[float], target_dim: int) -> List[float]:
-        """
-        Resize embedding to target dimension.
-
-        Args:
-            embedding: Embedding vector as list
-            target_dim: Target dimension
-
-        Returns:
-            Resized embedding vector
-        """
-        if len(embedding) == target_dim:
-            return embedding
-        elif len(embedding) > target_dim:
-            return embedding[:target_dim]
-        else:
-            return embedding + [0.0] * (target_dim - len(embedding))
-
     async def embed_async(
         self,
         texts: Union[str, List[str]],
-        target_dimension: Optional[int] = None,
         batch_size: int = 32,
         normalize: bool = True
     ) -> List[List[float]]:
@@ -109,7 +88,6 @@ class TransformerEncoder:
 
         Args:
             texts: Single string or list of strings to embed
-            target_dimension: Target dimension for embeddings (uses self.target_dimension if None)
             batch_size: Batch size for processing
             normalize: Whether to normalize embeddings
 
@@ -124,9 +102,6 @@ class TransformerEncoder:
 
         if not texts:
             return []
-
-        # Use target_dimension from parameter or instance
-        target_dim = target_dimension or self.target_dimension
 
         try:
             # Run embedding in executor to avoid blocking event loop
@@ -147,29 +122,15 @@ class TransformerEncoder:
                 else:
                     embeddings = list(embeddings_tensor)
 
-            if embeddings and len(embeddings) > 0:
-                first_dim = len(embeddings[0]) if embeddings[0] else 0
-
-                if first_dim == 0:
-                    # Return dummy embeddings if empty
-                    return [[0.0] * (target_dim or 768) for _ in texts]
-
-                # Resize embeddings if target_dimension is specified
-                if target_dim and first_dim != target_dim:
-                    embeddings = [
-                        self._resize_embedding(emb, target_dim)
-                        for emb in embeddings
-                    ]
-
-            else:
-                # Return dummy embeddings if no embeddings received
-                return [[0.0] * (target_dim or 768) for _ in texts]
+            if not embeddings or len(embeddings) == 0:
+                # Return empty list if no embeddings received
+                return []
 
             return embeddings
 
         except Exception:
-            # Return dummy embeddings on error
-            return [[0.0] * (target_dim or 768) for _ in texts]
+            # Return empty list on error
+            return []
 
 
 __all__ = ["TransformerEncoder"]
