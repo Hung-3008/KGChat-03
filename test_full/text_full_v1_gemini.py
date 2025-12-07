@@ -26,12 +26,13 @@ sys.path.insert(0, str(backend_path))
 try:
     from backend.llm.providers.gemini.gemini_client import GeminiClient
     from backend.llm.providers.gemini.gemini_config import GeminiConfig
-    from backend.retrieval.query_analyzer import analyze_query, QueryIntent
-    from backend.retrieval.keyword_extractor import extract_keywords
+    from backend.pipeline.query_analyzer import analyze_query, QueryIntent
+    from backend.pipeline.keyword_extractor import extract_keywords
     from backend.retrieval.triple_level_retriever import (
         retrieve_from_knowledge_graph,
         format_retrieval_results
     )
+    from backend.encoders.transformer_encoder import TransformerEncoder
     from qdrant_client import QdrantClient
     from backend.db.neo4j_client import Neo4jClient
     print("✅ Đã import các modules thành công")
@@ -64,12 +65,12 @@ async def initialize_clients():
         print(f"❌ Lỗi khởi tạo Gemini Client: {e}")
         return None
 
-    # 2. Tạo Gemini Embedding Wrapper (thay thế Ollama)
-    print("\n📌 Tạo Gemini Embedding Wrapper...")
+    # 2. Tạo Transformer Encoder Wrapper (thay thế Gemini/Ollama embedding)
+    print("\n📌 Khởi tạo Transformer Encoder...")
     try:
-        class GeminiEmbeddingWrapper:
-            def __init__(self, gemini_client, target_dimension=768):
-                self.gemini_client = gemini_client
+        class TransformerEmbeddingWrapper:
+            def __init__(self, transformer_encoder, target_dimension=768):
+                self.transformer_encoder = transformer_encoder
                 self.target_dimension = target_dimension
 
             def _resize_embedding(self, embedding, target_dim):
@@ -82,7 +83,7 @@ async def initialize_clients():
                     return embedding + [0.0] * (target_dim - len(embedding))
 
             async def embed(self, texts):
-                """Tạo embeddings sử dụng Gemini"""
+                """Tạo embeddings sử dụng Transformer Encoder"""
                 if isinstance(texts, str):
                     texts = [texts]
 
@@ -91,11 +92,25 @@ async def initialize_clients():
 
                 try:
                     import asyncio
+                    import numpy as np
+
+                    # Chạy embedding trong executor để không block event loop
                     loop = asyncio.get_event_loop()
-                    embeddings = await loop.run_in_executor(
+                    encoder = self.transformer_encoder
+                    embeddings_tensor = await loop.run_in_executor(
                         None,
-                        lambda: self.gemini_client.embed(texts)
+                        lambda: encoder.embed_to_numpy(texts)
                     )
+
+                    # Convert numpy array sang list of lists
+                    if isinstance(embeddings_tensor, np.ndarray):
+                        embeddings = embeddings_tensor.tolist()
+                    else:
+                        # Nếu là torch.Tensor, convert sang numpy rồi sang list
+                        if hasattr(embeddings_tensor, 'numpy'):
+                            embeddings = embeddings_tensor.numpy().tolist()
+                        else:
+                            embeddings = list(embeddings_tensor)
 
                     if embeddings and len(embeddings) > 0:
                         first_dim = len(embeddings[0]) if embeddings[0] else 0
@@ -114,7 +129,8 @@ async def initialize_clients():
                             print(
                                 f"✅ Embeddings đã có đúng {self.target_dimension} dimensions")
                     else:
-                        print("⚠️  Cảnh báo: Không nhận được embeddings từ Gemini")
+                        print(
+                            "⚠️  Cảnh báo: Không nhận được embeddings từ Transformer Encoder")
                         embeddings = [
                             [0.0] * self.target_dimension for _ in texts]
 
@@ -125,12 +141,20 @@ async def initialize_clients():
                     traceback.print_exc()
                     return [[0.0] * self.target_dimension for _ in texts]
 
+        # Khởi tạo Transformer Encoder
+        transformer_encoder = TransformerEncoder(
+            model_name="NeuML/pubmedbert-base-embeddings",
+            device="cpu"
+        )
+
         # Tạo wrapper với dimension mặc định 768
-        clients["ollama_client"] = GeminiEmbeddingWrapper(
-            clients["gemini_client"], target_dimension=768)
-        print("✅ Gemini Embedding Wrapper đã được tạo")
+        clients["ollama_client"] = TransformerEmbeddingWrapper(
+            transformer_encoder, target_dimension=768)
+        print("✅ Transformer Encoder Wrapper đã được tạo")
     except Exception as e:
-        print(f"❌ Lỗi tạo Gemini Embedding Wrapper: {e}")
+        print(f"❌ Lỗi tạo Transformer Encoder Wrapper: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
     # 3. Qdrant Client
@@ -187,6 +211,9 @@ async def initialize_clients():
                 else:
                     print("   - Sử dụng dimension mặc định: 768")
                     collection_dimension = 768
+                    # Cập nhật target_dimension cho wrapper
+                    if clients.get("ollama_client"):
+                        clients["ollama_client"].target_dimension = collection_dimension
             except Exception as e:
                 print(f"   ⚠️  Lỗi lấy thông tin collection: {e}")
                 collection_dimension = 768
@@ -653,7 +680,7 @@ async def process_query_full_pipeline(query: str, conversation_history=None, cli
                 print("❌ Thiếu clients cần thiết cho truy vấn đồ thị")
                 print(f"   - Neo4j: {'✅' if neo4j_client else '❌'}")
                 print(
-                    f"   - Ollama (Embedding): {'✅' if ollama_client else '❌'}")
+                    f"   - Transformer Encoder (Embedding): {'✅' if ollama_client else '❌'}")
                 print(f"   - Qdrant: {'✅' if qdrant_client else '❌'}")
                 return result
 

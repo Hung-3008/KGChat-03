@@ -12,7 +12,6 @@ sys.path.insert(0, str(root_path))
 try:
     from backend.llm.providers.gemini.gemini_client import GeminiClient
     from backend.llm.providers.gemini.gemini_config import GeminiConfig
-    from backend.retrieval.keyword_extractor import extract_keywords
+    from backend.pipeline.keyword_extractor import extract_keywords
     print("Imported modules successfully")
 except ImportError as e:
-    

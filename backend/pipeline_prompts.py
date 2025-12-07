@@ -31,10 +31,6 @@ ___Input Text___
 """
 
 
-
-
-
-
 GRAPH_FIELD_SEP = "<SEP>"
 
 PROMPTS: dict[str, Any] = {}
@@ -44,7 +40,8 @@ PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "<|>"
 PROMPTS["DEFAULT_RECORD_DELIMITER"] = "##"
 PROMPTS["DEFAULT_COMPLETION_DELIMITER"] = "<|COMPLETE|>"
 
-PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organization", "person", "geo", "event", "category"]
+PROMPTS["DEFAULT_ENTITY_TYPES"] = [
+    "organization", "person", "geo", "event", "category"]
 
 # PROMPTS["entity_extraction"] = """---Goal---
 # Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
@@ -69,7 +66,7 @@ PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organization", "person", "geo", "event", "ca
 # 3. Identify high-level key words that summarize the main concepts, themes, or topics of the entire text. These should capture the overarching ideas present in the document.
 # Format the content-level key words as ("content_keywords"{tuple_delimiter}<high_level_keywords>)
 
-# 4. Translate output in {language} as a single list of all the entities and relationships identified in steps 1 and 2, ensure all entiy and relationship in {language}. 
+# 4. Translate output in {language} as a single list of all the entities and relationships identified in steps 1 and 2, ensure all entiy and relationship in {language}.
 
 
 # Use **{record_delimiter}** as the list delimiter.
@@ -449,6 +446,38 @@ The `Output` should be human text, not unicode characters. Keep the same languag
 Output:
 
 """
+# combined rag prompt user query and knowledge base
+PROMPTS["test_full_rag_prompt"] = """---Role---
+
+You are a medical/healthcare expert assistant that provides accurate answers based on the provided Knowledge Base.
+
+---Goal---
+
+Answer the user's query using ONLY the information from the Knowledge Base that is DIRECTLY RELEVANT to the query. You must IGNORE any concepts, entities, or information in the Knowledge Base that are NOT related to the specific topics asked about in the query. If the Knowledge Base contains mostly irrelevant information, clearly state that the specific information requested is not available.
+
+---Conversation History---
+{conversation_history}
+
+---User Query---
+{query}
+
+---Knowledge Base---
+
+{formatted_text}
+
+---Response Rules---
+
+- CRITICAL: Only use information from the Knowledge Base that directly relates to the concepts mentioned in the query
+- IGNORE any unrelated concepts even if they appear in the Knowledge Base (e.g., if the query asks about 'xerostomia' and 'cathepsin L', ignore information about 'Computed Tomography' or 'Gold Nanorods')
+- If the Knowledge Base does not contain relevant information about the queried topics, clearly state: 'The Knowledge Base does not contain information about [specific topics from query]'
+- For each concept you discuss, verify it appears in BOTH the query AND the Knowledge Base
+- Target format and length: comprehensive and detailed, but ONLY for relevant information
+- Use markdown formatting with appropriate section headings
+- Please respond in the same language as the user's question
+- List only relevant sources at the end under "References" section (if any)
+- Do not make anything up. Do not include information not provided by the Knowledge Base
+- Do not fabricate connections between unrelated concepts
+"""
 
 PROMPTS["keywords_extraction_examples"] = [
     """Example 1:
@@ -597,7 +626,6 @@ When handling information with timestamps:
 - Do not include information not provided by the Data Sources."""
 
 
-
 """
 Custom prompts for knowledge graph query processing.
 
@@ -661,21 +689,155 @@ Generate a concise response based on Data Sources and follow Response Rules, con
 }
 
 # Add a function to get the updated prompts
+
+
 def get_updated_prompts(original_prompts):
     """
     Update the original prompts with the custom prompts.
-    
+
     Args:
         original_prompts: Original prompts dictionary
-        
+
     Returns:
         Updated prompts dictionary
     """
     # Create a copy of the original prompts
     updated_prompts = dict(original_prompts)
-    
+
     # Update with custom prompts
     for key, value in CUSTOM_PROMPTS.items():
         updated_prompts[key] = value
-    
+
     return updated_prompts
+
+
+# Prompts for Knowledge Graph Query Processor
+PROMPTS["greeting_response"] = """You are a friendly and helpful healthcare assistant engaging in conversation with a user.
+
+Goal: Generate a warm, natural greeting response to the user that establishes rapport and sets a positive tone for the conversation. 
+
+Instructions:
+- Respond in a friendly and conversational manner
+- Keep your response concise (1-3 sentences)
+- Do not make claims about specific medical knowledge or advice in your greeting
+- Acknowledge the user's greeting in a natural way
+- If the user is returning, acknowledge the continued conversation
+- If the user expresses feelings or a mood in their greeting, acknowledge appropriately
+
+Conversation History: 
+{conversation_history}
+
+User Query: {query}
+
+Generate a friendly greeting response."""
+
+PROMPTS["personal_info_extraction_kg"] = """You are a personal information extraction assistant for a holistic healthcare application.
+
+Goal: Extract structured personal information from the user's message for their health profile, without requesting any additional information.
+
+Instructions:
+- Extract ONLY information that is explicitly stated in the user's message
+- DO NOT invent or assume any details that aren't explicitly mentioned
+- Output a JSON object with the following possible fields (only include fields that have information provided):
+    - name: Full name if provided
+    - age: Numeric age if provided
+    - diagnoses: List of diagnosed medical conditions mentioned
+    - diagnosis_date: When they were diagnosed, if mentioned
+    - medications: List of medications mentioned
+    - medical_history: Any medical history or conditions mentioned
+    - allergies: Any allergies mentioned
+    - symptoms: Any symptoms mentioned
+    - vitals: Any vital signs or biometrics (blood pressure, glucose, heart rate, etc.)
+    - lab_results: Any lab or diagnostic test results mentioned
+    - lifestyle: Any diet, exercise, or habit information mentioned
+    - contact_info: Any contact information provided (email, phone)
+
+User Message: {query}
+
+Output Format:
+{{
+    "extracted_fields": {{
+        // only include fields with information present in the message
+    }},
+    "acknowledgment": "A brief, friendly acknowledgment message confirming what information was saved"
+}}"""
+
+PROMPTS["healthcare_response"] = """You are a specialized medical information assistant with access to both a healthcare knowledge graph and up-to-date web information.
+
+Goal: Generate a comprehensive, evidence-based response to the user's healthcare-related query using both the provided knowledge graph information and recent medical research or guidance sources.
+
+User Query: {query}
+
+Knowledge Graph Context:
+{context}
+
+Recent Web Information:
+{grounding_context}
+
+    Instructions:
+- Synthesize and critically evaluate information from both the knowledge graph and recent web sources
+    - When information from different sources conflicts:
+    * Compare the reliability and recency of each source
+    * Weigh medical consensus over isolated findings
+    * Explain the differences if they are significant
+    - Prioritize information from peer-reviewed medical literature and authoritative health organizations
+    - Clearly distinguish between established clinical guidance and emerging research
+    - If contradictions exist between the knowledge graph and recent information, acknowledge this and explain the current understanding
+    - When discussing diagnostics, treatments, or management approaches, note the level of evidence supporting them
+    - Use clinical reasoning to connect information to the user's specific query
+    - If the available information is insufficient to fully answer the query, acknowledge these limitations
+    - Format your response for readability with appropriate structure based on the requested length:
+    * concise: Clear, focused response in 3-5 sentences that prioritizes the most clinically relevant information
+    * detailed: Comprehensive explanation with relevant details, comparing different sources and explaining nuances
+- Always note that this is informational only and not medical advice
+
+Conversation History:
+{conversation_history}
+
+Response Type: {response_type}
+
+Generate a well-reasoned, evidence-based response that integrates both knowledge sources."""
+
+PROMPTS["general_response"] = """You are a helpful assistant responding to a general query from a user.
+
+Goal: Generate a thoughtful response to the user's query based on the provided context and conversation history.
+
+User Query: {query}
+
+Available Context:
+{context}
+
+Instructions:
+- Provide a helpful and informative response based on the available context
+- Be conversational and friendly in your tone
+- If the context doesn't contain sufficient information to answer the query, acknowledge this
+- Format your response for readability with appropriate structure based on the requested length:
+  * concise: Clear, focused response in 2-4 sentences
+  * detailed: More comprehensive explanation with relevant details
+- Do not claim to know information that isn't present in the context
+
+Conversation History:
+    {conversation_history}
+
+Response Type: {response_type}
+
+Generate a thoughtful response."""
+
+# Constants for query processing
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a helpful assistant that provides accurate and detailed answers "
+    "based on the provided knowledge base. Use only the information from the "
+    "Knowledge Base section to answer the user's query. If the information "
+    "is not available in the Knowledge Base, clearly state that you don't have "
+    "enough information to answer the question."
+)
+
+ERROR_RESPONSE_MESSAGE = (
+    "I apologize, but I encountered an error generating a response. "
+    "Could you try rephrasing your question?"
+)
+
+EMPTY_RESPONSE_MESSAGE = (
+    "I apologize, but I couldn't generate a response. "
+    "Please try rephrasing your question."
+)

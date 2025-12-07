@@ -8,11 +8,15 @@ then traverses connections to more specific Level 2 nodes.
 """
 import logging
 import asyncio
+import re
+from pathlib import Path
+from datetime import datetime
 from typing import List, Dict, Any, Optional, Set, Union, Tuple
 
 from backend.db.neo4j_client import Neo4jClient
 from backend.db.vector_db import VectorDBClient
 from backend.utils.logging import get_logger
+from backend.pipeline_prompts import PROMPTS
 
 # Configure logger
 logger = get_logger(__name__)
@@ -22,7 +26,7 @@ async def retrieve_from_knowledge_graph(
     high_level_keywords: List[str],
     low_level_keywords: List[str],
     neo4j_client: Neo4jClient,
-    ollama_client: Any,
+    embedding_client: Any,
     qdrant_client: Optional[VectorDBClient] = None,
     top_k: int = 5,
     max_distance: float = 0.8,
@@ -35,7 +39,7 @@ async def retrieve_from_knowledge_graph(
         high_level_keywords: High-level keywords from the query
         low_level_keywords: Low-level keywords from the query
         neo4j_client: Neo4j database client
-        ollama_client: Ollama client for embedding generation
+        embedding_client: Embedding client for generating embeddings (e.g., TransformerEncoder, GeminiEmbeddingWrapper)
         qdrant_client: Optional Vector database client for similarity search
         top_k: Number of top results to retrieve for each keyword
         max_distance: Maximum vector distance for retrievals
@@ -64,17 +68,83 @@ async def retrieve_from_knowledge_graph(
     all_keywords = high_level_keywords + low_level_keywords
 
     try:
-        # STEP 1: Generate embeddings for all keywords
-        embeddings = await ollama_client.embed(all_keywords)
+        # STEP 1: Try exact text matching first for better precision
+        exact_match_entities = await retrieve_level1_nodes_by_text(
+            all_keywords,
+            neo4j_client,
+            top_k=top_k
+        )
 
-        # STEP 2: Retrieve relevant Level 1 nodes using vector similarity
-        level1_entities = await retrieve_level1_nodes(
+        logger.info(
+            f"Found {len(exact_match_entities)} nodes by exact text matching")
+
+        # STEP 2: Generate embeddings for all keywords
+        # Use embed_async if available, otherwise fallback to embed (sync or async)
+        if hasattr(embedding_client, 'embed_async'):
+            # Prefer async method (e.g., TransformerEncoder.embed_async)
+            embeddings = await embedding_client.embed_async(all_keywords)
+        elif hasattr(embedding_client, 'embed'):
+            # Check if embed is async or sync
+            import inspect
+            embed_method = getattr(embedding_client, 'embed')
+            if inspect.iscoroutinefunction(embed_method):
+                # embed is async (e.g., GeminiEmbeddingWrapper.embed)
+                embeddings = await embedding_client.embed(all_keywords)
+            else:
+                # embed is sync (e.g., TransformerEncoder.embed), run in executor
+                loop = asyncio.get_event_loop()
+                embeddings = await loop.run_in_executor(
+                    None,
+                    lambda: embedding_client.embed(all_keywords)
+                )
+        else:
+            raise ValueError(
+                "Embedding client must have 'embed_async' or 'embed' method")
+
+        # STEP 3: Retrieve relevant Level 1 nodes using vector similarity
+        embedding_entities = await retrieve_level1_nodes(
             embeddings,
             qdrant_client,
             neo4j_client,
             top_k=top_k,
             similarity_threshold=similarity_threshold
         )
+
+        logger.info(
+            f"Found {len(embedding_entities)} nodes by embedding similarity")
+
+        # STEP 4: Combine results, prioritizing exact matches
+        # Create a dict to avoid duplicates, with exact matches having higher priority
+        combined_entities = {}
+
+        # Add exact matches first (higher priority)
+        for entity in exact_match_entities:
+            entity_id = entity.get("id") or entity.get("entity_id")
+            if entity_id:
+                # Mark as exact match with higher score
+                entity["similarity_score"] = 1.0
+                entity["match_type"] = "exact"
+                combined_entities[entity_id] = entity
+
+        # Add embedding matches (only if not already in exact matches)
+        for entity in embedding_entities:
+            entity_id = entity.get("id") or entity.get("entity_id")
+            if entity_id and entity_id not in combined_entities:
+                entity["match_type"] = "embedding"
+                combined_entities[entity_id] = entity
+
+        # Convert back to list and sort by similarity score
+        level1_entities = list(combined_entities.values())
+        level1_entities.sort(key=lambda x: x.get(
+            "similarity_score", 0), reverse=True)
+
+        # Limit to top results
+        max_total_nodes = top_k * 3
+        if len(level1_entities) > max_total_nodes:
+            level1_entities = level1_entities[:max_total_nodes]
+
+        logger.info(
+            f"Combined total: {len(level1_entities)} unique Level 1 nodes")
 
         # Store Level 1 nodes in context
         retrieval_context["level1_nodes"] = level1_entities
@@ -104,6 +174,87 @@ async def retrieve_from_knowledge_graph(
     except Exception as e:
         logger.error(f"Error during knowledge graph retrieval: {str(e)}")
         return retrieval_context
+
+
+async def retrieve_level1_nodes_by_text(
+    keywords: List[str],
+    neo4j_client: Neo4jClient,
+    top_k: int = 5
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve Level 1 nodes using exact text matching on node names.
+
+    Args:
+        keywords: List of keywords to search for
+        neo4j_client: Neo4j database client
+        top_k: Maximum number of results per keyword
+
+    Returns:
+        List of retrieved Level 1 node dictionaries
+    """
+    retrieved_entities = []
+    unique_entity_ids = set()
+
+    try:
+        for keyword in keywords:
+            # Search for nodes where name contains the keyword (case-insensitive)
+            # Using CONTAINS for partial matching, or use "= $keyword" for exact match
+            query = """
+            MATCH (n:Level1)
+            WHERE toLower(n.name) CONTAINS toLower($keyword)
+            RETURN n.id as id, n.name as name, n.semantic_type as semantic_type,
+                   n.cui as cui, n.definition as definition, n.icd as icd, n.level as level
+            LIMIT $limit
+            """
+
+            try:
+                logger.info(
+                    f"Searching for Level1 nodes containing: '{keyword}'")
+                results = await neo4j_client.execute_query(
+                    query,
+                    {"keyword": keyword, "limit": top_k}
+                )
+
+                logger.info(
+                    f"Found {len(results) if results else 0} nodes for keyword '{keyword}'")
+
+                for record in results:
+                    entity_id = record.get("id")
+
+                    if not entity_id or entity_id in unique_entity_ids:
+                        continue
+
+                    node_data = {
+                        "id": entity_id,
+                        "entity_id": entity_id,
+                        "name": record.get("name", ""),
+                        "semantic_type": record.get("semantic_type", ""),
+                        "cui": record.get("cui", ""),
+                        "definition": record.get("definition", ""),
+                        "icd": record.get("icd", ""),
+                        "level": record.get("level", "Level 1"),
+                        "entity_type": record.get("semantic_type", "CONCEPT"),
+                        "description": record.get("definition", ""),
+                        "similarity_score": 1.0,  # Perfect match for exact text search
+                        "match_type": "text"
+                    }
+
+                    retrieved_entities.append(node_data)
+                    unique_entity_ids.add(entity_id)
+                    logger.debug(
+                        f"Found node: {node_data.get('name')} (id: {entity_id})")
+
+            except Exception as e:
+                logger.error(
+                    f"Error searching for keyword '{keyword}': {str(e)}")
+
+        logger.info(
+            f"Retrieved {len(retrieved_entities)} unique Level 1 nodes by text matching")
+        return retrieved_entities
+
+    except Exception as e:
+        logger.error(f"Error in text-based Level 1 node retrieval: {str(e)}")
+        return []
 
 
 async def retrieve_level1_nodes(
@@ -154,6 +305,13 @@ async def retrieve_level1_nodes(
                             f"Node missing id. "
                             f"Payload keys: {list(node.payload.keys()) if node.payload else 'None'}, "
                             f"Score: {similarity_score}")
+                        continue
+
+                    # Apply similarity threshold filter
+                    if similarity_score is not None and similarity_score < similarity_threshold:
+                        logger.debug(
+                            f"Skipping node {entity_id} with similarity score {similarity_score:.4f} "
+                            f"below threshold {similarity_threshold}")
                         continue
 
                     if entity_id in unique_entity_ids:
@@ -646,3 +804,177 @@ def format_retrieval_results(
     sections.append("\n".join(main_content))
 
     return "\n".join(sections)
+
+
+def sanitize_filename(text: str, max_length: int = 100) -> str:
+    """
+    Convert text to a valid filename.
+
+    Args:
+        text: Text to convert
+        max_length: Maximum length of the filename
+
+    Returns:
+        Sanitized filename
+    """
+    # Remove special symbols from text
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[-\s]+', '_', text)
+    if len(text) > max_length:
+        text = text[:max_length]
+    return text.strip('_')
+
+
+def create_rag_prompt(query: str, formatted_text: str, conversation_history: Optional[str] = None) -> str:
+    """
+    Create RAG prompt ready to be passed to LLM.
+
+    Args:
+        query: User's query
+        formatted_text: Text formatted from format_retrieval_results
+        conversation_history: Conversation history (optional)
+
+    Returns:
+        Prompt string ready to be passed to LLM
+    """
+    # Use prompt template from pipeline_prompts.py
+    prompt_template = PROMPTS.get("test_full_rag_prompt", "")
+
+    # Format conversation history
+    history_text = conversation_history if conversation_history else "(No previous conversation)"
+
+    # Format prompt with values
+    prompt = prompt_template.format(
+        query=query,
+        formatted_text=formatted_text,
+        conversation_history=history_text
+    )
+
+    return prompt
+
+
+def save_retrieval_result(
+    query: str,
+    formatted_text: str,
+    result: dict,
+    conversation_history: Optional[str] = None,
+    output_dir: Optional[Path] = None
+) -> Optional[str]:
+    """
+    Save formatted retrieval result to output_pipeline_retrie folder.
+    Format according to RAG prompt structure for direct use with LLM.
+
+    Args:
+        query: Original query
+        formatted_text: Text formatted from format_retrieval_results
+        result: Dictionary containing all results
+        conversation_history: Conversation history (optional)
+        output_dir: Output directory (optional, defaults to output_pipeline_retrie at root)
+
+    Returns:
+        Path to saved file or None if error
+    """
+    try:
+        # Import QueryIntent if available (optional dependency)
+        query_intent_enum = None
+        has_query_intent = False
+        try:
+            from backend.pipeline.query_analyzer import QueryIntent
+            query_intent_enum = QueryIntent
+            has_query_intent = True
+        except ImportError:
+            pass
+
+        # Create output_pipeline_retrie folder if it doesn't exist
+        if output_dir is None:
+            # Get root path from current file (backend/retrieval/triple_level_retrieval.py)
+            # Go up 2 levels to reach root: backend/retrieval -> backend -> root
+            current_file = Path(__file__)
+            root_path = current_file.parent.parent.parent
+            output_dir = root_path / "output_pipeline_retrie"
+        else:
+            output_dir = Path(output_dir)
+
+        output_dir.mkdir(exist_ok=True)
+
+        # Create filename based on query and timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        query_sanitized = sanitize_filename(query, max_length=50)
+        filename = f"prompt_{timestamp}_{query_sanitized}.txt"
+        file_path = output_dir / filename
+
+        # Create RAG prompt ready to be passed to LLM
+        rag_prompt = create_rag_prompt(
+            query, formatted_text, conversation_history)
+
+        # Create file content with prompt and metadata
+        content_parts = []
+
+        # Main prompt section (ready to copy to LLM)
+        content_parts.append("=" * 80)
+        content_parts.append(
+            "PROMPT READY FOR LLM (Copy the section below to use)")
+        content_parts.append("=" * 80)
+        content_parts.append("")
+        content_parts.append(rag_prompt)
+        content_parts.append("")
+
+        # Metadata section (for reference)
+        content_parts.append("=" * 80)
+        content_parts.append("METADATA (For reference only)")
+        content_parts.append("=" * 80)
+        content_parts.append(
+            f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Intent (if available)
+        intent = result.get('intent')
+        if intent:
+            if has_query_intent and hasattr(intent, 'name'):
+                content_parts.append(f"Intent: {intent.name}")
+            else:
+                content_parts.append(f"Intent: {intent}")
+        else:
+            content_parts.append("Intent: N/A")
+
+        # Keywords (if available)
+        high_level_keywords = result.get('high_level_keywords', [])
+        low_level_keywords = result.get('low_level_keywords', [])
+
+        # Display keywords if available (for HEALTHCARE_RELATED or any keywords)
+        if high_level_keywords or low_level_keywords:
+            # Only display if intent is HEALTHCARE_RELATED (if QueryIntent exists) or if QueryIntent doesn't exist
+            should_show_keywords = True
+            if has_query_intent and query_intent_enum and intent:
+                should_show_keywords = (
+                    intent == query_intent_enum.HEALTHCARE_RELATED)
+
+            if should_show_keywords:
+                content_parts.append(
+                    f"High-level keywords: {', '.join(high_level_keywords)}")
+                content_parts.append(
+                    f"Low-level keywords: {', '.join(low_level_keywords)}")
+
+        # Retrieval statistics
+        if result.get('retrieval_result'):
+            retrieval = result['retrieval_result']
+            content_parts.append(f"Retrieval Statistics:")
+            content_parts.append(
+                f"  - Level 1 nodes: {len(retrieval.get('level1_nodes', []))}")
+            content_parts.append(
+                f"  - Level 2 nodes: {len(retrieval.get('level2_nodes', []))}")
+            content_parts.append(
+                f"  - Relationships: {len(retrieval.get('relationships', []))}")
+
+        # Write file
+        full_content = "\n".join(content_parts)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(full_content)
+
+        logger.info(f"Saved retrieval result to: {file_path}")
+        return str(file_path)
+
+    except Exception as e:
+        logger.error(f"Error saving retrieval result: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None

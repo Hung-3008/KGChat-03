@@ -24,8 +24,8 @@ sys.path.insert(0, str(backend_path))
 try:
     from backend.llm.providers.gemini.gemini_client import GeminiClient
     from backend.llm.providers.gemini.gemini_config import GeminiConfig
-    from backend.retrieval.query_analyzer import analyze_query, QueryIntent
-    from backend.retrieval.keyword_extractor import extract_keywords
+    from backend.pipeline.query_analyzer import analyze_query, QueryIntent
+    from backend.pipeline.keyword_extractor import extract_keywords
     print("✅ Đã import các modules thành công")
 except ImportError as e:
     print(f"❌ Lỗi import modules: {e}")

@@ -81,6 +81,7 @@ celerybeat-schedule
 .python-version
 data/*
 output/*
+output_pipeline_retrie/
 scripts/*
 !scripts/test_gemini_client.py
 !scripts/sample_input.jsonl
