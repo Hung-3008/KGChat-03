@@ -79,13 +79,15 @@ class EntityLinker:
         entity_list_names: str = None, # Optional now
         batch_size: int = 256,
         max_length: int = 64,
-        device: str = "cuda"
+        device: str = "cuda",
+        search_batch_size: int = 64 # Default to 64
     ):
         self.model_name_or_path = model_name_or_path
         self.entity_list_names = entity_list_names
         self.batch_size = batch_size
         self.max_length = max_length
         self.device = device
+        self.search_batch_size = search_batch_size
 
         logger.info("Loading model from %s", model_name_or_path)
         self.config = AutoConfig.from_pretrained(model_name_or_path)
@@ -144,7 +146,8 @@ class EntityLinker:
         
         # Original logic: concatenate mention vector with itself (dim=1)
         # This matches the prototype + knowledge vector structure in the index (vector_size * 2)
-        mentions_tensor = torch.cat([mentions_tensor, mentions_tensor], dim=1)
+        # FIXED: Removed concatenation as Qdrant collection is 768 dim to match generate_prototypes.py
+        # mentions_tensor = torch.cat([mentions_tensor, mentions_tensor], dim=1)
         
         results = []
         logger.info("Retrieving top hits from Qdrant (Batch)...")
@@ -161,10 +164,42 @@ class EntityLinker:
             ) for v in vectors
         ]
         
-        batch_results = self.qdrant.client.search_batch(
-            collection_name=self.collection_name,
-            requests=requests
-        )
+        # Chunk requests into smaller batches
+        chunk_size = self.search_batch_size
+        batch_results = []
+        
+        import time 
+        from qdrant_client.http.exceptions import ResponseHandlingException
+        import httpx
+
+        for i in range(0, len(requests), chunk_size):
+            chunk = requests[i : i + chunk_size]
+            
+            # Retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    chunk_results = self.qdrant.client.search_batch(
+                        collection_name=self.collection_name,
+                        requests=chunk
+                    )
+                    batch_results.extend(chunk_results)
+                    break # Success
+                except (ResponseHandlingException, httpx.ReadTimeout) as e:
+                    if attempt < max_retries - 1:
+                        wait = 2 ** attempt
+                        logger.warning(f"Search batch failed (attempt {attempt+1}): {e}. Retrying in {wait}s...")
+                        time.sleep(wait)
+                    else:
+                        logger.error(f"Search batch failed after {max_retries} attempts: {e}")
+                        # Append empty results for this chunk to keep indices aligned? 
+                        # search_batch returns list of results corresponding to requests.
+                        # If we fail, we MUST append empty lists to maintain alignment if we continue, 
+                        # or re-raise. Re-raising is safer for correctness.
+                        raise
+                except Exception as e:
+                    logger.error(f"Unexpected error in search batch: {e}")
+                    raise
         
         for i, hits in enumerate(batch_results):
             final_candidates = []

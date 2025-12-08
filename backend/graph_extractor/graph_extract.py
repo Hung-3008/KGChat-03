@@ -48,10 +48,15 @@ class GraphExtractor:
             time_logger=self.time_logger
         )
         
+        # Qdrant config
+        qdrant_config = self.configs.get("Qdrant", {})
+        search_batch_size = qdrant_config.get("search_batch_size", 64)
+        
         self.edge_extractor = EdgeExtractor(
             llm_client=self.llm_client,
             model_name=self.llm_config.get("model", "gpt-like-model"),
-            time_logger=self.time_logger
+            time_logger=self.time_logger,
+            search_batch_size=search_batch_size
         )
 
     def _load_config(self) -> dict:

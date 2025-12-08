@@ -110,3 +110,4 @@ storage/
 .qdrant-initialized
 backups/*
 qdrant_snapshots/*
+./agent/*

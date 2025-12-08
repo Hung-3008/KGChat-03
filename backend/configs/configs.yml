@@ -16,10 +16,15 @@ Encoder:
 
 Create:
   Batch_size: 1
-  Limit: 1
+  Limit: 2
   Resume: False 
 
 Insert:
   Batch_size: 1000
   Limit: 100 000
   Resume: False
+
+Qdrant:
+  timeout: 300 
+  search_batch_size: 32 
+

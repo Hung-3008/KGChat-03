@@ -191,6 +191,13 @@ def generate_vectors(
         cursor = duck_con.cursor()
         cursor.execute(duck_query)
         
+        # Define SimpleConcept outside the loop or use a dict
+        @dataclass
+        class SimpleConcept:
+            cui: str
+            stn: str
+            Type: str
+
         while True:
             # Fetch batch
             rows = cursor.fetchmany(batch_size)
@@ -200,18 +207,7 @@ def generate_vectors(
             batch_data = []
             for row in rows:
                 # row: (cui, stn, type, alias)
-                # We need to construct 'concept' object or similar structure expected below
-                # The code below expects item['concept'] with .cui, .stn, .Type attributes
-                # and item['alias']
-                
                 cui, stn, type_, alias = row
-                
-                # Create a dummy concept object
-                @dataclass
-                class SimpleConcept:
-                    cui: str
-                    stn: str
-                    Type: str
                 
                 concept = SimpleConcept(cui=cui, stn=stn, Type=type_)
                 
