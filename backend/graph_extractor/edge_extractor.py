@@ -85,90 +85,34 @@ class EdgeExtractor:
             else:
                 level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
 
+        # Prepare prompt (keep variable name consistent with previous logic if needed, 
+        # but structured output usually just needs the core instruction + data)
+        # The prompt template likely has instructions on JSON format which might be redundant now, 
+        # but keeping it for the task description is fine. 
         prompt = (
             EDGE_EXTRACTION_PROMPT
             .replace("[INPUT TEXT]", text)
             .replace("[ENTITIES LIST]", json.dumps(prompt_nodes_dict, ensure_ascii=False))
         )
 
-        #save prompt to check 
-        # with open ("edge_extraction_prompt.txt", "w", encoding="utf-8") as f:
-        #     f.write(prompt) 
-        
-        def _generate_and_parse():
-            resp = self.llm_client.generate(prompt=prompt)
-            
-            # Helper to convert LLM response to Edge objects
-            def convert_to_edge(edge_data):
-                if isinstance(edge_data, Edge):
-                    return edge_data
-                if not isinstance(edge_data, dict):
-                    return None
-                
-                # Map subject/predicate/object (from prompt) to source/target/relation (schema)
-                edge_dict = edge_data.copy()
-                if "subject" in edge_dict:
-                    edge_dict["source"] = edge_dict.pop("subject")
-                if "predicate" in edge_dict:
-                    edge_dict["relation"] = edge_dict.pop("predicate")
-                if "object" in edge_dict:
-                    edge_dict["target"] = edge_dict.pop("object")
-                
-                try:
-                    return Edge(**edge_dict)
-                except Exception:
-                    return None
-            
-            # Normalize response to edges list
-            edges_data = []
-            
-            if isinstance(resp, dict):
-                edges_data = resp.get("edges", [])
-                if not isinstance(edges_data, list):
-                    edges_data = [edges_data] if edges_data else []
-            
-            elif isinstance(resp, list):
-                # Raw list of edges
-                edges_data = resp
-            
-            elif isinstance(resp, ExtractedEdges):
-                return resp
-            
-            elif isinstance(resp, str):
-                # Strip markdown code blocks
-                cleaned_resp = resp.strip()
-                if "```json" in cleaned_resp:
-                    cleaned_resp = cleaned_resp.split("```json")[1].split("```")[0].strip()
-                elif "```" in cleaned_resp:
-                    cleaned_resp = cleaned_resp.split("```")[1].split("```")[0].strip()
-                
-                # logger.info(f"LLM Response (cleaned): {cleaned_resp}")
-                
-                try:
-                    data = json.loads(cleaned_resp)
-                except json.JSONDecodeError:
-                    logger.error(f"Failed to parse JSON: {cleaned_resp}")
-                    data = {"edges": []}
-
-                if isinstance(data, dict):
-                    edges_data = data.get("edges", [])
-                elif isinstance(data, list):
-                    edges_data = data
-                else:
-                    edges_data = []
-            
-            # Convert all edges
-            edge_objs = [convert_to_edge(e) for e in edges_data]
-            edge_objs = [e for e in edge_objs if e is not None]
-            return ExtractedEdges(edges=edge_objs)
-
         try:
             llm_edges_result = ExtractedEdges(edges=[])
+            
+            def _generate_structured():
+                 resp = self.llm_client.generate(prompt=prompt, format=ExtractedEdges)
+                 if isinstance(resp, dict):
+                     return ExtractedEdges(**resp)
+                 elif isinstance(resp, ExtractedEdges):
+                     return resp
+                 else:
+                     logger.error(f"Unexpected response type from LLM: {type(resp)}")
+                     return ExtractedEdges(edges=[])
+
             if self.time_logger:
                 with Timer(self.time_logger, file_name, "Edge: LLM Generation"):
-                    llm_edges_result = _generate_and_parse()
+                    llm_edges_result = _generate_structured()
             else:
-                llm_edges_result = _generate_and_parse()
+                llm_edges_result = _generate_structured()
             
             # Combine LLM edges with REF_TO edges
             all_edges = llm_edges_result.edges + ref_to_edges

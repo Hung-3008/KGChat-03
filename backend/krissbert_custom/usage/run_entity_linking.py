@@ -80,7 +80,7 @@ class EntityLinker:
         batch_size: int = 256,
         max_length: int = 64,
         device: str = "cuda",
-        search_batch_size: int = 64 # Default to 64
+        search_batch_size: int = 10 # Default to 10 to avoid Qdrant timeouts
     ):
         self.model_name_or_path = model_name_or_path
         self.entity_list_names = entity_list_names
@@ -169,7 +169,7 @@ class EntityLinker:
         batch_results = []
         
         import time 
-        from qdrant_client.http.exceptions import ResponseHandlingException
+        from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
         import httpx
 
         for i in range(0, len(requests), chunk_size):
@@ -185,17 +185,15 @@ class EntityLinker:
                     )
                     batch_results.extend(chunk_results)
                     break # Success
-                except (ResponseHandlingException, httpx.ReadTimeout) as e:
+                except (ResponseHandlingException, httpx.ReadTimeout, UnexpectedResponse) as e:
+                    # Log the specific error type and message
+                    error_msg = str(e)
                     if attempt < max_retries - 1:
                         wait = 2 ** attempt
-                        logger.warning(f"Search batch failed (attempt {attempt+1}): {e}. Retrying in {wait}s...")
+                        logger.warning(f"Search batch failed (attempt {attempt+1}/{max_retries}): {error_msg}. Retrying in {wait}s...")
                         time.sleep(wait)
                     else:
-                        logger.error(f"Search batch failed after {max_retries} attempts: {e}")
-                        # Append empty results for this chunk to keep indices aligned? 
-                        # search_batch returns list of results corresponding to requests.
-                        # If we fail, we MUST append empty lists to maintain alignment if we continue, 
-                        # or re-raise. Re-raising is safer for correctness.
+                        logger.error(f"Search batch failed after {max_retries} attempts: {error_msg}")
                         raise
                 except Exception as e:
                     logger.error(f"Unexpected error in search batch: {e}")

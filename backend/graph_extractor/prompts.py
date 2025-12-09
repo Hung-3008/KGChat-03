@@ -284,7 +284,7 @@ For each relationship, return a JSON object with:
 - object: exact entity name from the entity list
 - evidence: exact sentence from the text that supports the relationship
 
-If there is no clear relationship, return an empty JSON array.
+If there is no clear relationship, return {"edges": []}.
 
 Clinical text:
 [INPUT TEXT]
@@ -292,7 +292,7 @@ Clinical text:
 Provided entities (exact names):
 [ENTITIES LIST]
 
-Return only a JSON array of relationship objects.
+Return a JSON object with a key "edges" containing a list of relationship objects.
 """
 
 EDGE_VALIDATION_PROMPT = """

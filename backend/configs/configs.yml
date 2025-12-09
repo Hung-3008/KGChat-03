@@ -16,7 +16,7 @@ Encoder:
 
 Create:
   Batch_size: 1
-  Limit: 2
+  Limit: 1
   Resume: False 
 
 Insert:

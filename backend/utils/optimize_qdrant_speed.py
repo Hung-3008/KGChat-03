@@ -40,12 +40,12 @@ def optimize_collection():
                 ef_construct=100,
             )
         )
-        print("✅ Optimization request sent successfully!")
+        print("Optimization request sent successfully!")
         print("The optimization process (quantization & re-indexing) is running in the background.")
         print("You can monitor the Qdrant logs to see the progress.")
         
     except Exception as e:
-        print(f"❌ Failed to update collection: {e}")
+        print(f"Failed to update collection: {e}")
 
 if __name__ == "__main__":
     optimize_collection()

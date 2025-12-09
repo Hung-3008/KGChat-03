@@ -101,8 +101,10 @@ class GraphExtractor:
             # Edge Extraction
             if self.time_logger:
                 with Timer(self.time_logger, input_file.name, f"Edge Extraction (Chunk {i})"):
+                    logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
                     edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
             else:
+                logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
                 edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
             
             # Process Level 2 Nodes
