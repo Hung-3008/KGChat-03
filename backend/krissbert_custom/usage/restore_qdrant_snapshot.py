@@ -8,7 +8,7 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def restore_snapshot(collection_name, backup_dir, qdrant_url="http://localhost:6333", api_key=None):
+def restore_snapshot(collection_name, backup_dir, qdrant_url="http://localhost:6333", api_key=None, delete_existing=False):
     # Find snapshot file
     if not os.path.exists(backup_dir):
         logger.error(f"Backup directory {backup_dir} does not exist.")
@@ -28,16 +28,23 @@ def restore_snapshot(collection_name, backup_dir, qdrant_url="http://localhost:6
     total_size = os.path.getsize(snapshot_path)
     logger.info(f"Snapshot size: {total_size / (1024**3):.2f} GB")
     
-    # Check if collection exists
+    client = QdrantClient(url=qdrant_url, api_key=api_key)
+
+    # Check/Delete collection
     try:
-        client = QdrantClient(url=qdrant_url, api_key=api_key)
         collections = client.get_collections().collections
         exists = any(c.name == collection_name for c in collections)
         
         if exists:
-            logger.warning(f"Collection '{collection_name}' already exists. It will be overwritten by the snapshot.")
+            if delete_existing:
+                logger.warning(f"Deleting existing collection '{collection_name}' as requested...")
+                client.delete_collection(collection_name)
+                logger.info(f"Collection '{collection_name}' deleted.")
+                exists = False # It's gone now
+            else:
+                logger.warning(f"Collection '{collection_name}' already exists. It will be overwritten by the snapshot.")
     except Exception as e:
-        logger.warning(f"Could not check if collection exists: {e}")
+        logger.warning(f"Could not check/delete collection: {e}")
     
     # Upload and restore
     url = f"{qdrant_url}/collections/{collection_name}/snapshots/upload"
@@ -92,9 +99,11 @@ if __name__ == "__main__":
     # Determine paths
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../../"))
-    backup_dir = os.path.join(project_root, "backups")
+    # Point to the correct snapshot directory
+    backup_dir = os.path.join(project_root, "qdrant_snapshots", "kg_lv2_nodes")
     
     # Collection name
     collection_name = "kg_lv2_nodes"
     
-    restore_snapshot(collection_name, backup_dir)
+    # Run restore with delete_existing=True
+    restore_snapshot(collection_name, backup_dir, delete_existing=True)

@@ -1,9 +1,6 @@
-version: '3.8'
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    environment:
-      - QDRANT__STORAGE__PERFORMANCE__ASYNC_SCORER=true
     ports:
       - "6333:6333"
       - "6334:6334"
