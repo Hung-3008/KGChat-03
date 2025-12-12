@@ -669,20 +669,39 @@ def format_retrieval_results(
     # Group Level 2 nodes by the Level 1 nodes that reference them
     level1_to_level2 = {}
 
-    # Create a dictionary to quickly look up Level 2 nodes by name
-    level2_by_name = {node.get('name', 'Unknown')                      : node for node in level2_nodes}
+    # Group Level 1 nodes by the Level 1 nodes that reference them
+    level1_to_level1 = {}
+
+    # Create dictionaries to quickly look up nodes
+    level2_by_name = {node.get('name', 'Unknown')
+                               : node for node in level2_nodes}
+    level1_by_id = {node.get('id') or node.get(
+        'entity_id'): node for node in level1_nodes if node.get('id') or node.get('entity_id')}
 
     # Group relationships by source entity ID
     for rel in relationships:
         source_id = rel.get('source_id')
+        target_id = rel.get('target_id')
         target_name = rel.get('target_name')
 
         if source_id and target_name:
-            if source_id not in level1_to_level2:
-                level1_to_level2[source_id] = []
+            # Check if target is a Level 1 node
+            if target_id and target_id in level1_by_id:
+                # This is a Level1-to-Level1 relationship
+                if source_id not in level1_to_level1:
+                    level1_to_level1[source_id] = []
 
-            # Add the target Level 2 node to the list if it exists
-            if target_name in level2_by_name:
+                level1_to_level1[source_id].append({
+                    'name': target_name,
+                    'node': level1_by_id[target_id],
+                    'relationship': rel
+                })
+            # Check if target is a Level 2 node
+            elif target_name in level2_by_name:
+                # This is a Level1-to-Level2 relationship
+                if source_id not in level1_to_level2:
+                    level1_to_level2[source_id] = []
+
                 level1_to_level2[source_id].append({
                     'name': target_name,
                     'node': level2_by_name[target_name],
@@ -713,11 +732,43 @@ def format_retrieval_results(
             node_section.append(f"{entity_desc}")
         node_section.append("")
 
+        # Add related Level 1 nodes if any
+        related_level1_nodes = level1_to_level1.get(entity_id, [])
+        if related_level1_nodes:
+            node_section.append(f"### Related Level 1 Concepts:")
+            for item in related_level1_nodes:
+                level1_related_node = item['node']
+                rel = item['relationship']
+                level1_related_name = level1_related_node.get(
+                    'name', 'Unknown')
+                level1_related_cui = level1_related_node.get('cui', '')
+                level1_related_definition = level1_related_node.get(
+                    'definition', '') or level1_related_node.get('description', '')
+                level1_related_type = level1_related_node.get(
+                    'semantic_type') or level1_related_node.get('entity_type', 'Unknown')
+                relationship_type = rel.get('type', 'RELATED_TO')
+
+                # Formatting Level 1 related node information
+                cui_str = f" (CUI: {level1_related_cui})" if level1_related_cui else ""
+                rel_type_str = f" [{relationship_type}]" if relationship_type != 'RELATED_TO' else ""
+
+                if level1_related_definition:
+                    # Truncate very long definitions
+                    if len(level1_related_definition) > 300:
+                        level1_related_definition = level1_related_definition[:297] + "..."
+                    node_section.append(
+                        f"* **{level1_related_name}**{cui_str}{rel_type_str} ({level1_related_type}): {level1_related_definition}")
+                else:
+                    node_section.append(
+                        f"* **{level1_related_name}**{cui_str}{rel_type_str} ({level1_related_type})")
+
+            node_section.append("")
+
         # Add related Level 2 nodes if any
-        related_nodes = level1_to_level2.get(entity_id, [])
-        if related_nodes:
-            node_section.append(f"### Related Concepts:")
-            for item in related_nodes:
+        related_level2_nodes = level1_to_level2.get(entity_id, [])
+        if related_level2_nodes:
+            node_section.append(f"### Related Level 2 Concepts:")
+            for item in related_level2_nodes:
                 level2_node = item['node']
                 level2_name = level2_node.get('name', 'Unknown')
                 level2_cui = level2_node.get('cui', '')
