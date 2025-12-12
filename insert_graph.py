@@ -88,6 +88,8 @@ def main():
     unique_nodes = {}
     NAMESPACE_UUID = uuid.uuid5(uuid.NAMESPACE_DNS, "fhc.project")
     
+    import ast
+
     for n in raw_nodes:
         name = n.get("name", "").strip()
         if not name:
@@ -102,17 +104,38 @@ def main():
                 embedding = json.loads(embedding_str)
             except:
                 embedding = []
+            
+            level = n.get("level", "Level 1")
+            
+            # Handle semantic_types list for Level 2
+            raw_semantic_types = n.get("semantic_types", "")
+            semantic_types_list = []
+            if raw_semantic_types:
+                try:
+                    semantic_types_list = ast.literal_eval(raw_semantic_types)
+                except:
+                    pass
+            
+            semantic_type = n.get("semantic_type", "")
+            if not semantic_type and semantic_types_list:
+                semantic_type = semantic_types_list[0]
                 
-            unique_nodes[name] = {
+            node_data = {
                 "id": node_id,
                 "name": name,
-                "semantic_type": n.get("semantic_type", ""),
+                "semantic_type": semantic_type,
                 "vector": embedding,
-                "icd": n.get("icd", ""),
-                "definition": n.get("definition", ""),
-                "cui": n.get("cui", ""),
-                "level": n.get("level", "Level 1")
+                "level": level
             }
+            
+            # Add Level 2 specific fields
+            if level == "Level 2":
+                 node_data["icd"] = n.get("icd", "")
+                 node_data["definition"] = n.get("definition", "")
+                 node_data["cui"] = n.get("cui", "")
+                 node_data["semantic_types"] = semantic_types_list
+            
+            unique_nodes[name] = node_data
             
     logger.info(f"Identified {len(unique_nodes)} unique nodes.")
     
@@ -132,15 +155,20 @@ def main():
         batch = node_list[i : i + batch_size]
         
         # Neo4j Batch
-        neo4j_nodes = [{
-            "id": n["id"], 
-            "name": n["name"], 
-            "semantic_type": n["semantic_type"],
-            "icd": n.get("icd", ""),
-            "definition": n.get("definition", ""),
-            "cui": n.get("cui", ""),
-            "level": n.get("level", "Level 1")
-        } for n in batch]
+        # Construct dictionaries dynamically based on what's in unique_nodes
+        neo4j_nodes = []
+        for n in batch:
+            node_props = {
+                "id": n["id"], 
+                "name": n["name"], 
+                "semantic_type": n["semantic_type"],
+                "level": n["level"]
+            }
+            # Optional fields check
+            for key in ["icd", "definition", "cui", "semantic_types"]:
+                if key in n:
+                     node_props[key] = n[key]
+            neo4j_nodes.append(node_props)
         
         try:
             inserted_count = neo4j.insert_nodes(neo4j_nodes)
@@ -153,18 +181,22 @@ def main():
         qdrant_points = []
         for n in batch:
             if n["vector"] and len(n["vector"]) > 0:
+                payload = {
+                     "name": n["name"], 
+                     "semantic_type": n["semantic_type"],
+                     "level": n["level"]
+                }
+                # Optional fields
+                for key in ["icd", "definition", "cui", "semantic_types"]:
+                    if key in n:
+                        payload[key] = n[key]
+                        
                 qdrant_points.append({
                     "id": n["id"],
                     "vector": n["vector"],
-                    "payload": {
-                        "name": n["name"], 
-                        "semantic_type": n["semantic_type"],
-                        "icd": n.get("icd", ""),
-                        "definition": n.get("definition", ""),
-                        "cui": n.get("cui", ""),
-                        "level": n.get("level", "Level 1")
-                    }
+                    "payload": payload
                 })
+
         if qdrant_points:
             try:
                 qdrant.insert_points(collection_name, qdrant_points)

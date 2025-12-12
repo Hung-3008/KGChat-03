@@ -13,7 +13,7 @@ if project_root not in sys.path:
 from backend.graph_extractor.graph_extract import GraphExtractor
 from backend.utils.time_logger import TimeLogger, setup_logger, Timer
 
-logger = setup_logger("create_graph")
+logger = setup_logger("vllm_create_graph_test")
 
 def load_config(config_path: str) -> dict:
     path = Path(config_path)
@@ -25,7 +25,8 @@ def load_config(config_path: str) -> dict:
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="backend/configs/configs.yml", help="Path to config file")
+    # Default to the new vllm config
+    parser.add_argument("--config", default="backend/configs/vllm_configs.yml", help="Path to config file")
     args = parser.parse_args()
     
     config_path = args.config
@@ -47,13 +48,14 @@ def main():
     
     logger.info(f"Found {total_files} files in {data_dir}")
     
-    output_dir = Path("output")
+    output_dir = Path("output_vllm") # Separate output directory for testing
     output_dir.mkdir(exist_ok=True)
     
     # Initialize TimeLogger
     time_logger = TimeLogger(output_dir / "time_log.csv")
     
     # Pass time_logger to GraphExtractor
+    print(f"Using config: {config_path}")
     extractor = GraphExtractor(config_path=config_path, time_logger=time_logger)
     
     nodes_path = output_dir / "nodes.csv"
@@ -91,6 +93,7 @@ def main():
     
     total_to_process = len(files_to_process)
     if not files_to_process:
+        logger.info("No files to process.")
         return
 
     # Process in batches
@@ -114,6 +117,8 @@ def main():
                 successful_files.append(file_path.name)
             except Exception as e:
                 logger.error(f"✗ Failed {file_path.name}: {e}")
+                import traceback
+                traceback.print_exc()
         
         # Save batch results
         if batch_nodes or batch_edges:
