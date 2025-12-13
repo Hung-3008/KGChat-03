@@ -84,42 +84,72 @@ class GraphExtractor:
         all_edges = []
         
         # Step 2 & 3: Node and Edge Extraction per chunk
-        for i, chunk in enumerate(chunks):
-            # Node Extraction
-            if self.time_logger:
-                with Timer(self.time_logger, input_file.name, f"Node Extraction (Chunk {i})"):
-                    nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
-            else:
-                nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
-                
-            for node in nodes:
-                node['chunk_id'] = i
-                node['source_file'] = input_file.name
-                node['level'] = "Level 1" # Mark as Level 1
-            all_nodes.extend(nodes)
+        # Step 2 & 3: Node and Edge Extraction per chunk
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        # Determine max workers, default to 3 as it's a reasonable balance
+        max_workers = self.configs.get("Create", {}).get("max_parallel_chunks", 3)
+        
+        def process_chunk(i, chunk):
+            chunk_nodes = []
+            chunk_edges = []
             
-            # Edge Extraction
-            if self.time_logger:
-                with Timer(self.time_logger, input_file.name, f"Edge Extraction (Chunk {i})"):
+            try:
+                # Node Extraction
+                if self.time_logger:
+                    with Timer(self.time_logger, input_file.name, f"Node Extraction (Chunk {i})"):
+                        nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
+                else:
+                    nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
+                    
+                for node in nodes:
+                    node['chunk_id'] = i
+                    node['source_file'] = input_file.name
+                    node['level'] = "Level 1" # Mark as Level 1
+                chunk_nodes.extend(nodes)
+                
+                # Edge Extraction
+                if self.time_logger:
+                    with Timer(self.time_logger, input_file.name, f"Edge Extraction (Chunk {i})"):
+                        logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
+                        edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+                else:
                     logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
                     edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
-            else:
-                logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
-                edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
-            
-            # Process Level 2 Nodes
-            for l2_node in level2_nodes:
-                l2_node['chunk_id'] = i
-                l2_node['source_file'] = input_file.name
-                # level is already set in EdgeExtractor
-            all_nodes.extend(level2_nodes)
                 
-            if edges_result and edges_result.edges:
-                for edge in edges_result.edges:
-                    edge_dict = edge.dict()
-                    edge_dict['chunk_id'] = i
-                    edge_dict['source_file'] = input_file.name
-                    all_edges.append(edge_dict)
+                # Process Level 2 Nodes
+                for l2_node in level2_nodes:
+                    l2_node['chunk_id'] = i
+                    l2_node['source_file'] = input_file.name
+                    # level is already set in EdgeExtractor
+                chunk_nodes.extend(level2_nodes)
+                    
+                if edges_result and edges_result.edges:
+                    for edge in edges_result.edges:
+                        edge_dict = edge.dict()
+                        edge_dict['chunk_id'] = i
+                        edge_dict['source_file'] = input_file.name
+                        chunk_edges.append(edge_dict)
+                        
+                return chunk_nodes, chunk_edges
+            except Exception as e:
+                import traceback
+                logger.error(f"Error extracting chunk {i}: {e}\n{traceback.format_exc()}")
+                return [], []
+
+        # Execute chunks in parallel
+        # Note: If memory usage is high, reduce chunk_parallelism in config
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_idx = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
+            
+            for future in as_completed(future_to_idx):
+                i = future_to_idx[future]
+                try:
+                    c_nodes, c_edges = future.result()
+                    all_nodes.extend(c_nodes)
+                    all_edges.extend(c_edges)
+                except Exception as e:
+                    logger.error(f"Failed to process chunk {i}: {e}")
         
         return all_nodes, all_edges
 

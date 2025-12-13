@@ -27,6 +27,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from backend.utils.qdrant_helper import QdrantHelper
 from qdrant_client import models
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
+import httpx
 
 from transformers import (
     AutoConfig,
@@ -80,7 +82,7 @@ class EntityLinker:
         batch_size: int = 256,
         max_length: int = 64,
         device: str = "cuda",
-        search_batch_size: int = 10 # Default to 10 to avoid Qdrant timeouts
+        search_batch_size: int = 5 # Default to 10 to avoid Qdrant timeouts
     ):
         self.model_name_or_path = model_name_or_path
         self.entity_list_names = entity_list_names
@@ -118,6 +120,35 @@ class EntityLinker:
             self.encoder, self.tokenizer, self.batch_size, self.max_length
         )
 
+    def _query_qdrant(self, vec: List[float], top_k: int) -> list:
+        """Helper to run a single Qdrant search with retries."""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                groups = self.qdrant.client.query_points_groups(
+                    collection_name=self.collection_name,
+                    query=vec,
+                    group_by="cui",
+                    limit=top_k, 
+                    group_size=1, 
+                    with_payload=["cui", "name", "definition", "icd", "semantic_types"],
+                    search_params=models.SearchParams(
+                        hnsw_ef=128,
+                        exact=False
+                    )
+                )
+                return groups.groups
+            except (ResponseHandlingException, httpx.ReadTimeout, UnexpectedResponse) as e:
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                else:
+                    logger.error(f"Search failed after {max_retries} attempts: {e}")
+                    return []
+            except Exception as e:
+                logger.error(f"Unexpected error in search: {e}")
+                return []
+        return []
+
     def predict(self, data: List[Dict], top_k: int = 5) -> List[Dict]:
         """
         Predict entities for a list of mentions.
@@ -144,96 +175,61 @@ class EntityLinker:
         logger.info("Generating mention vectors...")
         mentions_tensor = self.retriever.generate_mention_vectors(ds)
         
-        # Original logic: concatenate mention vector with itself (dim=1)
-        # This matches the prototype + knowledge vector structure in the index (vector_size * 2)
-        # FIXED: Removed concatenation as Qdrant collection is 768 dim to match generate_prototypes.py
-        # mentions_tensor = torch.cat([mentions_tensor, mentions_tensor], dim=1)
-        
         results = []
-        logger.info("Retrieving top hits from Qdrant (Batch)...")
+        logger.info("Retrieving top hits from Qdrant using Search Groups...")
         
-        # Prepare batch requests
-        search_limit = top_k * 10
         vectors = mentions_tensor.numpy().tolist()
-        
-        requests = [
-            models.QueryRequest(
-                query=v,
-                limit=search_limit,
-                with_payload=["cui", "name", "definition", "icd", "semantic_types"]
-            ) for v in vectors
-        ]
-        
-        # Chunk requests into smaller batches
         chunk_size = self.search_batch_size
-        batch_results = []
         
-        import time 
-        from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
-        import httpx
-
-        for i in range(0, len(requests), chunk_size):
-            chunk = requests[i : i + chunk_size]
-            
-            # Retry logic
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    # Use query_batch_points instead of search_batch for Qdrant 1.10+
-                    chunk_results_response = self.qdrant.client.query_batch_points(
-                        collection_name=self.collection_name,
-                        requests=chunk
-                    )
-                    # Extract points from QueryResponse
-                    chunk_results = [res.points for res in chunk_results_response]
-                    batch_results.extend(chunk_results)
-                    break # Success
-                except (ResponseHandlingException, httpx.ReadTimeout, UnexpectedResponse) as e:
-                    # Log the specific error type and message
-                    error_msg = str(e)
-                    if attempt < max_retries - 1:
-                        wait = 2 ** attempt
-                        logger.warning(f"Search batch failed (attempt {attempt+1}/{max_retries}): {error_msg}. Retrying in {wait}s...")
-                        time.sleep(wait)
-                    else:
-                        logger.error(f"Search batch failed after {max_retries} attempts: {error_msg}")
-                        raise
-                except Exception as e:
-                    logger.error(f"Unexpected error in search batch: {e}")
-                    raise
+        # Using ThreadPoolExecutor specifically for I/O bound Qdrant queries
+        # We process in chunks to control concurrency depth and memory usage
+        from concurrent.futures import ThreadPoolExecutor
         
-        for i, hits in enumerate(batch_results):
-            final_candidates = []
-            seen_cuis = set()
+        for i in range(0, len(vectors), chunk_size):
+            chunk_vectors = vectors[i : i + chunk_size]
             
-            for hit in hits:
-                if len(final_candidates) >= top_k:
-                    break
+            chunk_group_results = []
+            
+            # Execute queries concurrently for this chunk
+            with ThreadPoolExecutor(max_workers=chunk_size) as executor:
+                # Prepare all tasks
+                futures = [
+                    executor.submit(self._query_qdrant, vec, top_k) 
+                    for vec in chunk_vectors
+                ]
                 
-                payload = hit.payload or {}
-                cui = payload.get('cui')
+                # Collect results in order
+                for future in futures:
+                    chunk_group_results.append(future.result())
+            
+            # Process results for this chunk
+            for j, groups in enumerate(chunk_group_results):
+                if not groups: continue
                 
-                # Deduplicate by CUI
-                if cui in seen_cuis:
-                    continue
+                final_candidates = []
+                for group in groups:
+                    if not group.hits: continue
+                    hit = group.hits[0]
+                    payload = hit.payload or {}
+                    final_candidates.append({
+                        'cui': payload.get('cui'),
+                        'name': payload.get('name'),
+                        'definition': payload.get('definition'),
+                        'icd': payload.get('icd'),
+                        'semantic_types': payload.get('semantic_types'),
+                        'score': hit.score
+                    })
                 
-                seen_cuis.add(cui)
-                final_candidates.append({
-                    'cui': cui,
-                    'name': payload.get('name'),
-                    'definition': payload.get('definition'),
-                    'icd': payload.get('icd'),
-                    'semantic_types': payload.get('semantic_types'),
-                    'score': hit.score
-                })
-            
-            mention_text = data[i]['mention']
-            lut_cuis = self.lut.get(mention_text, [])
-            
-            results.append({
-                'mention': mention_text,
-                'candidates': final_candidates,
-                'lut_hits': lut_cuis
-            })
-            
+                # Map back to mention text
+                original_idx = i + j
+                if original_idx < len(data):
+                    mention_text = data[original_idx]['mention']
+                    lut_cuis = self.lut.get(mention_text, [])
+                    
+                    results.append({
+                        'mention': mention_text,
+                        'candidates': final_candidates,
+                        'lut_hits': lut_cuis
+                    })
+                    
         return results

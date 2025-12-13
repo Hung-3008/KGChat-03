@@ -17,7 +17,8 @@ Encoder:
 Create:
   Batch_size: 1
   Limit: 1
-  Resume: False 
+  Resume: False
+  max_parallel_chunks: 3
 
 Insert:
   Batch_size: 1
