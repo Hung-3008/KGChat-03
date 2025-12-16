@@ -22,8 +22,46 @@ def load_config(config_path: str) -> dict:
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
+def process_single_file(args):
+    """Process a single file and return nodes, edges, and filename.
+    This must be a module-level function for ProcessPoolExecutor pickling.
+    """
+    file_path, config_path, output_dir = args
+    
+    try:
+        # Each process needs its own extractor
+        time_logger = TimeLogger(output_dir / "time_log.csv")
+        extractor = GraphExtractor(config_path=config_path, time_logger=time_logger)
+        
+        logger.info(f"Processing: {file_path.name}")
+        
+        with Timer(time_logger, file_path.name, "Total File Processing"):
+            nodes, edges = extractor.extract_from_file(str(file_path))
+        
+        logger.info(f"✓ Completed {file_path.name}: {len(nodes)} nodes, {len(edges)} edges")
+        return {
+            'filename': file_path.name,
+            'nodes': nodes,
+            'edges': edges,
+            'success': True,
+            'error': None
+        }
+    except Exception as e:
+        logger.error(f"✗ Failed {file_path.name}: {e}")
+        import traceback
+        return {
+            'filename': file_path.name,
+            'nodes': [],
+            'edges': [],
+            'success': False,
+            'error': str(e) + "\n" + traceback.format_exc()
+        }
+
 def main():
     import argparse
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    import threading
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="backend/configs/configs.yml", help="Path to config file")
     args = parser.parse_args()
@@ -35,6 +73,7 @@ def main():
     batch_size = create_config.get("Batch_size", 10)
     limit = create_config.get("Limit")
     resume = create_config.get("Resume", False)
+    max_parallel_files = create_config.get("max_parallel_files", 1)
     
     data_dir = Path("data/PMC_Part1")
     if not data_dir.exists():
@@ -50,15 +89,12 @@ def main():
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
     
-    # Initialize TimeLogger
-    time_logger = TimeLogger(output_dir / "time_log.csv")
-    
-    # Pass time_logger to GraphExtractor
-    extractor = GraphExtractor(config_path=config_path, time_logger=time_logger)
-    
     nodes_path = output_dir / "nodes.csv"
     edges_path = output_dir / "edges.csv"
     log_path = output_dir / "processed_files.txt"
+    
+    # Thread lock for file writing
+    file_lock = threading.Lock()
     
     processed_files = set()
     
@@ -93,43 +129,48 @@ def main():
     if not files_to_process:
         return
 
-    # Process in batches
-    for i in range(0, len(files_to_process), batch_size):
-        batch_files = files_to_process[i : i + batch_size]
+    logger.info(f"Processing {total_to_process} files with {max_parallel_files} workers")
+    
+    # Process files in batches
+    completed_count = 0
+    
+    # Use ProcessPoolExecutor for true parallelism
+    # Note: Using processes instead of threads to avoid GIL and share GPU properly
+    with ProcessPoolExecutor(max_workers=max_parallel_files) as executor:
+        # Submit all files with arguments
+        future_to_file = {
+            executor.submit(process_single_file, (file_path, config_path, output_dir)): file_path 
+            for file_path in files_to_process
+        }
         
-        batch_nodes = []
-        batch_edges = []
-        successful_files = []
-        
-        for idx, file_path in enumerate(batch_files):
-            current_file_num = i + idx + 1
-            logger.info(f"Processing file {current_file_num}/{total_to_process}: {file_path.name}")
+        # Collect results as they complete
+        for future in as_completed(future_to_file):
+            file_path = future_to_file[future]
+            completed_count += 1
             
             try:
-                with Timer(time_logger, file_path.name, "Total File Processing"):
-                    nodes, edges = extractor.extract_from_file(str(file_path))
-                    batch_nodes.extend(nodes)
-                    batch_edges.extend(edges)
-                logger.info(f"✓ Completed {file_path.name}: {len(nodes)} nodes, {len(edges)} edges")
-                successful_files.append(file_path.name)
+                result = future.result()
+                
+                if result['success']:
+                    # Thread-safe file writing
+                    with file_lock:
+                        if result['nodes'] or result['edges']:
+                            # Create a temporary extractor just for saving
+                            temp_extractor = GraphExtractor(config_path=config_path)
+                            temp_extractor.save_nodes(result['nodes'], nodes_path, append=True)
+                            temp_extractor.save_edges(result['edges'], edges_path, append=True)
+                        
+                        # Update log
+                        with log_path.open("a", encoding="utf-8") as f:
+                            f.write(f"{result['filename']}\n")
+                    
+                    logger.info(f"Progress: {completed_count}/{total_to_process} files completed")
+                else:
+                    logger.error(f"Failed to process {result['filename']}: {result['error']}")
+                    
             except Exception as e:
-                logger.error(f"✗ Failed {file_path.name}: {e}")
-        
-        # Save batch results
-        if batch_nodes or batch_edges:
-            extractor.save_nodes(batch_nodes, nodes_path, append=True)
-            extractor.save_edges(batch_edges, edges_path, append=True)
-        
-        # Update log
-        if successful_files:
-            with log_path.open("a", encoding="utf-8") as f:
-                for fname in successful_files:
-                    f.write(f"{fname}\n")
-        
-        # Clear RAM (variables)
-        del batch_nodes
-        del batch_edges
-        
+                logger.error(f"Exception while processing {file_path.name}: {e}")
+    
     logger.info(f"✓ Completed all {total_to_process} files")
 
 if __name__ == "__main__":

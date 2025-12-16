@@ -17,9 +17,9 @@ Encoder:
 Create:
   Batch_size: 10
   Limit: Null
-  Resume: True
+  Resume: False  # Test from scratch
   max_parallel_chunks: 3
-  max_parallel_files: 5  # Number of files to process concurrently
+  max_parallel_files: 3  # Use 3 for testing
 
 Insert:
   Batch_size: 1
@@ -27,6 +27,5 @@ Insert:
   Resume: False
 
 Qdrant:
-  timeout: 300 
-  search_batch_size: 15  # Increased for better throughput with concurrent queries 
-
+  timeout: 300
+  search_batch_size: 10
