@@ -1,5 +1,0 @@
-PMC10000898_result.json
-PMC10000838_result.json
-PMC10000274_result.json
-PMC10000901_result.json
-PMC10000948_result.json

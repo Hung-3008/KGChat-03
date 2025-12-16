@@ -18,8 +18,8 @@ Create:
   Batch_size: 10
   Limit: Null
   Resume: True
-  max_parallel_chunks: 3
-  max_parallel_files: 5  # Number of files to process concurrently
+  max_parallel_chunks: 5 # Number of chunks to process concurrently
+  max_parallel_files: 10  # Number of files to process concurrently
 
 Insert:
   Batch_size: 1
