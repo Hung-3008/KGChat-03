@@ -63,6 +63,14 @@ class GraphExtractor:
             linker_batch_size=linker_batch_size
         )
 
+    def set_time_logger(self, time_logger: Optional[TimeLogger]):
+        """Update time logger for the extractor and its components without rebuilding heavy models."""
+        self.time_logger = time_logger
+        if hasattr(self.node_extractor, "time_logger"):
+            self.node_extractor.time_logger = time_logger
+        if hasattr(self.edge_extractor, "time_logger"):
+            self.edge_extractor.time_logger = time_logger
+
     def _load_config(self) -> dict:
         if not self.config_path.exists():
             logger.warning(f"Warning: Config file not found at {self.config_path}")

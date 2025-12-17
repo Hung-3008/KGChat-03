@@ -19,8 +19,8 @@ Create:
   Batch_size: 10
   Limit: Null
   Resume: True
-  max_parallel_chunks: 10
-  max_parallel_files: 1   
+  max_parallel_chunks: 6
+  max_parallel_files: 3   
 
 Insert:
   Batch_size: 1
