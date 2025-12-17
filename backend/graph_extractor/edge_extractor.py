@@ -10,7 +10,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from backend.graph_extractor.schema import ExtractedEdges, ValidatedEntity, Entity, Edge
-from backend.graph_extractor.prompts import EDGE_EXTRACTION_PROMPT, EDGE_VALIDATION_PROMPT
+from backend.graph_extractor.prompts import EDGE_EXTRACTION_PROMPT
 from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 from backend.krissbert_custom.usage.run_entity_linking import EntityLinker
 
@@ -80,7 +80,7 @@ class EdgeExtractor:
         
         if self.entity_linker:
             if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: Krissbert Linking"):
+                with Timer(self.time_logger, file_name, "edge_krissbert"):
                     level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
             else:
                 level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
@@ -109,7 +109,7 @@ class EdgeExtractor:
                      return ExtractedEdges(edges=[])
 
             if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: LLM Generation"):
+                with Timer(self.time_logger, file_name, "edge_llm"):
                     llm_edges_result = _generate_structured()
             else:
                 llm_edges_result = _generate_structured()

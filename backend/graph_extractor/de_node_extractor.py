@@ -170,7 +170,7 @@ class NodeExtractor:
 
         # Stage 1: Extract raw entities
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 1: Raw Extraction"):
+            with Timer(self.time_logger, file_name, "node_stage1"):
                 activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
                 phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
                 physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
@@ -193,7 +193,7 @@ class NodeExtractor:
 
         # Stage 2: Hierarchical filtering - filter entities by UMLS hierarchy depth
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 2: Hierarchy Filter"):
+            with Timer(self.time_logger, file_name, "node_stage2"):
                 filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
         else:
             filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
@@ -202,7 +202,7 @@ class NodeExtractor:
         
         # Stage 3: LLM filtering
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 3: LLM Filter"):
+            with Timer(self.time_logger, file_name, "node_stage3"):
                 llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
         else:
             llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
@@ -211,7 +211,7 @@ class NodeExtractor:
        
         # Stage 4: Embedding
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 4: Embedding"):
+            with Timer(self.time_logger, file_name, "node_stage4"):
                 entities_list = []
                 if isinstance(llm_filtered_entities, dict):
                     if "entities" in llm_filtered_entities:

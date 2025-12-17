@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import yaml
 from pathlib import Path
 from typing import List
@@ -13,7 +14,7 @@ if project_root not in sys.path:
 from backend.graph_extractor.graph_extract import GraphExtractor
 from backend.utils.time_logger import TimeLogger, setup_logger, Timer
 
-logger = setup_logger("create_graph")
+logger = setup_logger("create_graph", log_file=Path("output/create_graph.log"))
 
 def load_config(config_path: str) -> dict:
     path = Path(config_path)
@@ -29,20 +30,28 @@ def process_single_file(args):
     file_path, config_path, output_dir = args
     
     try:
-        # Each process needs its own extractor
-        time_logger = TimeLogger(output_dir / "time_log.csv")
+        # Each process needs its own logger instance, but shouldn't write to file directly
+        # to avoid race conditions. We'll return the stats to the main process instead.
+        time_logger = TimeLogger(output_dir / "time_log.csv", write_to_file=False)
+        time_logger.start_file(file_path.name)
+
         extractor = GraphExtractor(config_path=config_path, time_logger=time_logger)
         
         logger.info(f"Processing: {file_path.name}")
         
-        with Timer(time_logger, file_path.name, "Total File Processing"):
-            nodes, edges = extractor.extract_from_file(str(file_path))
+        start_time = time.time()
+        nodes, edges = extractor.extract_from_file(str(file_path))
+        total_duration = time.time() - start_time
+        
+        # Get stats but don't write to file here
+        timing_stats = time_logger.get_file_stats(file_path.name, total_duration)
         
         logger.info(f"✓ Completed {file_path.name}: {len(nodes)} nodes, {len(edges)} edges")
         return {
             'filename': file_path.name,
             'nodes': nodes,
             'edges': edges,
+            'timing_stats': timing_stats,
             'success': True,
             'error': None
         }
@@ -91,7 +100,11 @@ def main():
     
     nodes_path = output_dir / "nodes.csv"
     edges_path = output_dir / "edges.csv"
+    time_log_path = output_dir / "time_log.csv"
     log_path = output_dir / "processed_files.txt"
+    
+    # Initialize TimeLogger in main process to ensure header is created safely
+    main_time_logger = TimeLogger(time_log_path, write_to_file=True)
     
     # Thread lock for file writing
     file_lock = threading.Lock()
@@ -160,6 +173,10 @@ def main():
                             temp_extractor.save_nodes(result['nodes'], nodes_path, append=True)
                             temp_extractor.save_edges(result['edges'], edges_path, append=True)
                         
+                        # Save timing stats safely
+                        if result.get('timing_stats'):
+                            main_time_logger.write_row(result['timing_stats'])
+
                         # Update log
                         with log_path.open("a", encoding="utf-8") as f:
                             f.write(f"{result['filename']}\n")

@@ -74,8 +74,9 @@ class GraphExtractor:
         # logger.info(f"Processing file: {input_path}")
         
         # Step 1: Chunking
+        # Step 1: Chunking
         if self.time_logger:
-            with Timer(self.time_logger, input_file.name, "Chunking"):
+            with Timer(self.time_logger, input_file.name, "chunking"):
                 chunks = self.chunker.chunk(input_file)
         else:
             chunks = self.chunker.chunk(input_file)
@@ -97,7 +98,7 @@ class GraphExtractor:
             try:
                 # Node Extraction
                 if self.time_logger:
-                    with Timer(self.time_logger, input_file.name, f"Node Extraction (Chunk {i})"):
+                    with Timer(self.time_logger, input_file.name, "node_total"):
                         nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
                 else:
                     nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
@@ -110,7 +111,7 @@ class GraphExtractor:
                 
                 # Edge Extraction
                 if self.time_logger:
-                    with Timer(self.time_logger, input_file.name, f"Edge Extraction (Chunk {i})"):
+                    with Timer(self.time_logger, input_file.name, "edge_total"):
                         logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
                         edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
                 else:

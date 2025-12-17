@@ -1,6 +1,6 @@
 LLM:
   client: ollama
-  model: llama3.1:8b
+  model: llama3.2:3b
   temperature: 0.85
   top_p: 1.0
   seed: 42
@@ -18,8 +18,8 @@ Create:
   Batch_size: 10
   Limit: Null
   Resume: True
-  max_parallel_chunks: 5 # Number of chunks to process concurrently
-  max_parallel_files: 10  # Number of files to process concurrently
+  max_parallel_chunks: 4  # Favor chunk-level parallelism; keep models in one process
+  max_parallel_files: 1   # Avoid reloading heavy models across processes
 
 Insert:
   Batch_size: 1
@@ -28,5 +28,5 @@ Insert:
 
 Qdrant:
   timeout: 300 
-  search_batch_size: 15  # Increased for better throughput with concurrent queries 
+  search_batch_size: 12  # Limit concurrent Qdrant queries to reduce I/O contention
 
