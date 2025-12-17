@@ -5,7 +5,7 @@ from backend.graph_extractor.schema import (
     Activity, Phenomenon, PhysicalObject, ConceptualEntity, Entity, ValidatedEntity
 )
 from backend.graph_extractor.prompts import (
-    ACTIVITY_PROMPT, PHENOMENON_PROMPT, PHYSICAL_OBJECT_PROMPT, CONCEPTUAL_ENTITY_PROMPT, CONTEXT_ENTITY_FILTER_PROMPT
+    CONTEXT_ENTITY_FILTER_PROMPT, COMBINED_ENTITY_PROMPT
 )
 from backend.graph_extractor.umls_hierarchy import (
     CLUSTER_DEFINITIONS, build_hierarchy_tree, filter_entities_by_hierarchy
@@ -22,6 +22,7 @@ class NodeExtractor:
         self.encoder = encoder or TransformerEncoder(model_name=embedding_model, device=device)
         self.hierarchy_tree = build_hierarchy_tree(CLUSTER_DEFINITIONS)
         self.time_logger = time_logger
+        self.combined_schema = self.build_combined_schema()
     
 
     def extract_context(self, text: str, mention: str, window_size: int = 50) -> Tuple[str, str]:
@@ -42,6 +43,7 @@ class NodeExtractor:
         return context_left, context_right
 
     def clean_empty_entities(self, entities: Union[Dict, List]) -> Dict:
+        """Backward-compatible cleaner for flat dict schemas (kept for Stage 3)."""
         if isinstance(entities, list):
             if entities and isinstance(entities[0], dict):
                 entities = entities[0]
@@ -57,10 +59,8 @@ class NodeExtractor:
                 cleaned_values = []
                 for item in value:
                     if isinstance(item, dict):
-                        # If it has semantic_type, keep the dict (Stage 3 output)
                         if "semantic_type" in item and ("name" in item or "mention" in item):
                             cleaned_values.append(item)
-                        # Otherwise extract name (Stage 1 output might be wrapped)
                         elif "name" in item:
                             cleaned_values.append(item["name"])
                         elif "mention" in item:
@@ -73,45 +73,76 @@ class NodeExtractor:
                 if cleaned_values:
                     cleaned[key] = cleaned_values
         return cleaned
-    
 
-    def build_simple_schema(self, model_class) -> Dict:
-        """Manually build JSON schema to avoid Pydantic crash."""
-        properties = {}
-        for name, field in model_class.model_fields.items():
-            # All fields in cluster models are List[str]
-            properties[name] = {"type": "array", "items": {"type": "string"}}
+    def build_combined_schema(self) -> Dict:
+        """Construct a strict JSON schema merging all clusters for one-shot extraction."""
+        clusters = {
+            "activity": Activity,
+            "phenomenon": Phenomenon,
+            "physical_object": PhysicalObject,
+            "conceptual_entity": ConceptualEntity,
+        }
+
+        properties: Dict[str, Dict] = {}
+        for cluster_name, model_cls in clusters.items():
+            cluster_props: Dict[str, Dict] = {}
+            for field_name in model_cls.model_fields.keys():
+                cluster_props[field_name] = {"type": "array", "items": {"type": "string"}}
+            properties[cluster_name] = {
+                "type": "object",
+                "properties": cluster_props,
+                "required": list(cluster_props.keys())
+            }
+
         return {
             "type": "object",
             "properties": properties,
             "required": list(properties.keys())
         }
 
-    def extract_entities(self, text: str, prompt_template: str, output_schema) -> List[Dict]:
-        if not text or not text.strip():
-            return []
-        
-        prompt = prompt_template.replace("[INPUT TEXT]", text)
-        try:
-            # Build schema manually
-            schema = self.build_simple_schema(output_schema)
-            resp = self.llm_client.generate(prompt=prompt, format=schema)
-            # logger.info(f"NodeExtractor LLM Resp: {resp}")
-            
-            # Resp should be a dict now since we passed format
-            if isinstance(resp, dict):
-                 return self.clean_empty_entities(resp)
-            elif isinstance(resp, str):
-                 # Fallback if client didn't parse it
-                 try:
-                     return self.clean_empty_entities(json.loads(resp))
-                 except:
-                     return {}
-            else:
-                 return {}
+    def _clean_combined_entities(self, resp: Dict) -> Dict[str, Dict[str, List[str]]]:
+        if not isinstance(resp, dict):
+            return {}
 
+        cleaned: Dict[str, Dict[str, List[str]]] = {}
+        for cluster, cluster_data in resp.items():
+            if not isinstance(cluster_data, dict):
+                continue
+            cluster_cleaned: Dict[str, List[str]] = {}
+            for sem_type, values in cluster_data.items():
+                if isinstance(values, list):
+                    normalized = []
+                    for v in values:
+                        if isinstance(v, str):
+                            v_clean = v.strip()
+                            if v_clean:
+                                normalized.append(v_clean)
+                        elif isinstance(v, (int, float)):
+                            normalized.append(str(v))
+                    if normalized:
+                        cluster_cleaned[sem_type] = normalized
+            if cluster_cleaned:
+                cleaned[cluster] = cluster_cleaned
+        return cleaned
+    
+
+    def extract_all_entities(self, text: str) -> Dict[str, Dict[str, List[str]]]:
+        if not text or not text.strip():
+            return {}
+
+        prompt = COMBINED_ENTITY_PROMPT.replace("[INPUT TEXT]", text)
+        try:
+            resp = self.llm_client.generate(prompt=prompt, format=self.combined_schema)
+            if isinstance(resp, dict):
+                return self._clean_combined_entities(resp)
+            if isinstance(resp, str):
+                try:
+                    return self._clean_combined_entities(json.loads(resp))
+                except Exception:
+                    return {}
+            return {}
         except Exception as e:
-            logger.error(f"Error in extract_entities: {e}")
+            logger.error(f"Error in extract_all_entities: {e}")
             return {}
     
 
@@ -168,26 +199,12 @@ class NodeExtractor:
         Stage 4: Embed entities
         """
 
-        # Stage 1: Extract raw entities
+        # Stage 1: Extract raw entities in a single structured call
         if self.time_logger:
             with Timer(self.time_logger, file_name, "node_stage1"):
-                activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
-                phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
-                physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
-                conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
+                all_entities = self.extract_all_entities(text)
         else:
-            activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
-            phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
-            physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
-            conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
-
-
-        all_entities = {
-            "activity": activity_entities,
-            "phenomenon": phenomenon_entities,
-            "physical_object": physical_object_entities,
-            "conceptual_entity": conceptual_entity_entities,
-        }
+            all_entities = self.extract_all_entities(text)
 
         #logger.info(f"Extracted Entities: {all_entities}")
 

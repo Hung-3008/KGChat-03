@@ -144,51 +144,76 @@ def main():
 
     logger.info(f"Processing {total_to_process} files with {max_parallel_files} workers")
     
-    # Process files in batches
+    # Process files
     completed_count = 0
-    
-    # Use ProcessPoolExecutor for true parallelism
-    # Note: Using processes instead of threads to avoid GIL and share GPU properly
-    with ProcessPoolExecutor(max_workers=max_parallel_files) as executor:
-        # Submit all files with arguments
-        future_to_file = {
-            executor.submit(process_single_file, (file_path, config_path, output_dir)): file_path 
-            for file_path in files_to_process
-        }
-        
-        # Collect results as they complete
-        for future in as_completed(future_to_file):
-            file_path = future_to_file[future]
-            completed_count += 1
-            
-            try:
-                result = future.result()
-                
+
+    if max_parallel_files <= 1:
+        logger.info("Single-worker mode: running sequentially (no process pool) for easier interrupt.")
+        try:
+            for file_path in files_to_process:
+                result = process_single_file((file_path, config_path, output_dir))
+
                 if result['success']:
-                    # Thread-safe file writing
                     with file_lock:
                         if result['nodes'] or result['edges']:
-                            # Create a temporary extractor just for saving
                             temp_extractor = GraphExtractor(config_path=config_path)
                             temp_extractor.save_nodes(result['nodes'], nodes_path, append=True)
                             temp_extractor.save_edges(result['edges'], edges_path, append=True)
-                        
-                        # Save timing stats safely
+
                         if result.get('timing_stats'):
                             main_time_logger.write_row(result['timing_stats'])
 
-                        # Update log
                         with log_path.open("a", encoding="utf-8") as f:
                             f.write(f"{result['filename']}\n")
-                    
+
+                    completed_count += 1
                     logger.info(f"Progress: {completed_count}/{total_to_process} files completed")
                 else:
                     logger.error(f"Failed to process {result['filename']}: {result['error']}")
+        except KeyboardInterrupt:
+            logger.warning("Interrupted by user; stopping sequential run.")
+            return
+    else:
+        # Use ProcessPoolExecutor for true parallelism
+        # Note: Using processes instead of threads to avoid GIL and share GPU properly
+        with ProcessPoolExecutor(max_workers=max_parallel_files) as executor:
+            future_to_file = {
+                executor.submit(process_single_file, (file_path, config_path, output_dir)): file_path 
+                for file_path in files_to_process
+            }
+            try:
+                for future in as_completed(future_to_file):
+                    file_path = future_to_file[future]
+                    completed_count += 1
                     
+                    result = future.result()
+                    
+                    if result['success']:
+                        with file_lock:
+                            if result['nodes'] or result['edges']:
+                                temp_extractor = GraphExtractor(config_path=config_path)
+                                temp_extractor.save_nodes(result['nodes'], nodes_path, append=True)
+                                temp_extractor.save_edges(result['edges'], edges_path, append=True)
+                            
+                            if result.get('timing_stats'):
+                                main_time_logger.write_row(result['timing_stats'])
+
+                            with log_path.open("a", encoding="utf-8") as f:
+                                f.write(f"{result['filename']}\n")
+                        
+                        logger.info(f"Progress: {completed_count}/{total_to_process} files completed")
+                    else:
+                        logger.error(f"Failed to process {result['filename']}: {result['error']}")
+            except KeyboardInterrupt:
+                logger.warning("Interrupted by user; cancelling pending tasks.")
+                for future in future_to_file:
+                    future.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
+                return
             except Exception as e:
                 logger.error(f"Exception while processing {file_path.name}: {e}")
     
-    logger.info(f"✓ Completed all {total_to_process} files")
+    logger.info(f"✓ Completed {completed_count}/{total_to_process} files")
 
 if __name__ == "__main__":
     main()

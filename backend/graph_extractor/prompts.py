@@ -101,6 +101,32 @@ Text:
 [INPUT TEXT]'''
 
 
+COMBINED_ENTITY_PROMPT = '''You are a medical entity extraction expert. Extract clinical entities from the text and organize them into four clusters: activity, phenomenon, physical_object, conceptual_entity.
+
+Rules:
+- Extract exact spans from the text, prefer the most specific semantic type.
+- Ignore generic/non-clinical items, keep clinically meaningful concepts.
+- Return valid JSON following the provided schema.
+
+Clusters and semantic types:
+1) activity: Laboratory_Procedure, Diagnostic_Procedure, Therapeutic_or_Preventive_Procedure, Health_Care_Activity, Research_Activity, Molecular_Biology_Research_Technique, Educational_Activity, Governmental_or_Regulatory_Activity, Machine_Activity, Daily_or_Recreational_Activity, Occupational_Activity, Activity, Behavior, Social_Behavior, Individual_Behavior
+2) phenomenon: Disease_or_Syndrome, Neoplastic_Process, Injury_or_Poisoning, Pathologic_Function, Mental_or_Behavioral_Dysfunction, Phenomenon_or_Process, Human_caused_Phenomenon_or_Process, Environmental_Effect_of_Humans, Natural_Phenomenon_or_Process, Biologic_Function, Physiologic_Function, Organism_Function, Organ_or_Tissue_Function, Cell_Function, Molecular_Function, Genetic_Function, Cell_or_Molecular_Dysfunction, Experimental_Model_of_Disease, Mental_Process
+3) physical_object: Body_Part_Organ_or_Organ_Component, Tissue, Cell, Cell_Component, Gene_or_Genome, Anatomical_Abnormality, Congenital_Abnormality, Acquired_Abnormality, Clinical_Drug, Pharmacologic_Substance, Antibiotic, Medical_Device, Drug_Delivery_Device, Research_Device, Indicator_Reagent_or_Diagnostic_Aid, Biologically_Active_Substance, Hormone, Enzyme, Vitamin, Immunologic_Factor, Receptor, Chemical_Viewed_Structurally, Chemical_Viewed_Functionally, Organic_Chemical, Inorganic_Chemical, Amino_Acid_Peptide_or_Protein, Nucleic_Acid_Nucleoside_or_Nucleotide, Element_Ion_or_Isotope, Substance, Body_Substance, Manufactured_Object, Physical_Object, Organism, Virus, Bacterium, Archaeon, Eukaryote, Plant, Fungus, Animal, Vertebrate, Amphibian, Bird, Fish, Reptile, Mammal, Human, Food, Research_Device
+4) conceptual_entity: Finding, Sign_or_Symptom, Laboratory_or_Test_Result, Clinical_Attribute, Body_Location_or_Region, Body_Space_or_Junction, Body_System, Quantitative_Concept, Qualitative_Concept, Temporal_Concept, Spatial_Concept, Functional_Concept, Molecular_Sequence, Nucleotide_Sequence, Amino_Acid_Sequence, Carbohydrate_Sequence, Organism_Attribute, Conceptual_Entity, Idea_or_Concept, Population_Group, Patient_or_Disabled_Group, Age_Group, Group, Professional_or_Occupational_Group, Biomedical_Occupation_or_Discipline, Health_Care_Related_Organization, Organization, Classification, Regulation_or_Law, Intellectual_Product, Language, Geographic_Area
+
+Output JSON schema (strict):
+{
+  "activity": {"SemanticType": ["entity", ...], ...},
+  "phenomenon": {"SemanticType": ["entity", ...], ...},
+  "physical_object": {"SemanticType": ["entity", ...], ...},
+  "conceptual_entity": {"SemanticType": ["entity", ...], ...}
+}
+
+Text:
+[INPUT TEXT]
+'''
+
+
 CONTEXT_ENTITY_FILTER_PROMPT = """Validate clinical entities extracted from text.
 
 INPUT:
