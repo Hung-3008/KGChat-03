@@ -20,7 +20,7 @@ from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 logger = setup_logger("graph_extractor")
 
 class GraphExtractor:
-    def __init__(self, config_path: str = "backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None):
+    def __init__(self, config_path: str = "/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None):
         self.config_path = Path(config_path)
         if not self.config_path.is_absolute():
             self.config_path = Path(project_root) / config_path

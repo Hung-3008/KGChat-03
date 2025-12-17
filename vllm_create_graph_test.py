@@ -26,7 +26,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     # Default to the new vllm config
-    parser.add_argument("--config", default="backend/configs/vllm_configs.yml", help="Path to config file")
+    parser.add_argument("--config", default="/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/vllm_configs.yml", help="Path to config file")
     args = parser.parse_args()
     
     config_path = args.config

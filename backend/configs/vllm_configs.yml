@@ -11,8 +11,8 @@ Encoder:
   device: cuda
 
 Create:
-  Batch_size: 1
-  Limit: 1 
+  Batch_size: 10
+  Limit: null
   Resume: False 
 
 Insert:

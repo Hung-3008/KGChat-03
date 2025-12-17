@@ -15,15 +15,15 @@ Encoder:
   device: cuda
 
 Create:
-  Batch_size: 1
-  Limit: 1
-  Resume: False
+  Batch_size: 10
+  Limit: null
+  Resume: True
   max_parallel_chunks: 3
 
 Insert:
   Batch_size: 1
   Limit: 100000
-  Resume: False
+  Resume: True
 
 Qdrant:
   timeout: 300 

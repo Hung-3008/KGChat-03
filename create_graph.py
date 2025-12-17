@@ -25,7 +25,7 @@ def load_config(config_path: str) -> dict:
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="backend/configs/configs.yml", help="Path to config file")
+    parser.add_argument("--config", default="/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/configs.yml", help="Path to config file")
     args = parser.parse_args()
     
     config_path = args.config
@@ -36,7 +36,7 @@ def main():
     limit = create_config.get("Limit")
     resume = create_config.get("Resume", False)
     
-    data_dir = Path("data/PMC_Part1")
+    data_dir = Path("/home/nguyenthang/Bản tải về/PMC_Part3")
     if not data_dir.exists():
         logger.error(f"Data directory not found: {data_dir}")
         return

@@ -22,7 +22,7 @@ def optimize_collection(collection_name: str):
         client.update_collection(
             collection_name=collection_name,
             optimizer_config=models.OptimizersConfigDiff(
-                default_segments_number=2, # Adjust based on CPU cores
+                # default_segments_number=2, # Removed as it caused validation error
             ),
             quantization_config=models.ScalarQuantization(
                 scalar=models.ScalarQuantizationConfig(

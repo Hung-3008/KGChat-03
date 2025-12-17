@@ -13,7 +13,7 @@ logger = logging.getLogger("retrieval_example")
 
 def main():
     logger.info("Initializing RetrievalManager...")
-    manager = RetrievalManager(config_path="backend/configs/configs.yml")
+    manager = RetrievalManager(config_path="/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/configs.yml")
     
     questions = [
         "What are the treatments for diabetes?",

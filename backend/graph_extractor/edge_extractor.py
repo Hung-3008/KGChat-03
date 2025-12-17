@@ -26,7 +26,7 @@ class EdgeExtractor:
         try:
             # Path to Krissbert model - assuming it's in the standard location or passed via config
             # For now hardcoding or using a default, ideally should be in config
-            krissbert_path = "backend/krissbert_custom" 
+            krissbert_path = "/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/krissbert_custom" 
             if not os.path.exists(os.path.join(krissbert_path, "pytorch_model.bin")):
                  # Fallback or check another path if needed, or just log warning
                  logger.warning(f"Krissbert model not found at {krissbert_path}, using 'bert-base-uncased' for testing/fallback")

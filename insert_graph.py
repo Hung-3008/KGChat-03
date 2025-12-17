@@ -40,7 +40,7 @@ def read_csv(filepath: Path) -> List[Dict]:
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="backend/configs/configs.yml", help="Path to config file")
+    parser.add_argument("--config", default="/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/configs.yml", help="Path to config file")
     args = parser.parse_args()
     
     configs = load_config(args.config)
