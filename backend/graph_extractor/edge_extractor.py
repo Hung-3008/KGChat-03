@@ -10,17 +10,18 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from backend.graph_extractor.schema import ExtractedEdges, ValidatedEntity, Entity, Edge
-from backend.graph_extractor.prompts import EDGE_EXTRACTION_PROMPT, EDGE_VALIDATION_PROMPT
+from backend.graph_extractor.prompts import EDGE_EXTRACTION_PROMPT
 from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 from backend.krissbert_custom.usage.run_entity_linking import EntityLinker
 
 logger = setup_logger("edge_extractor")
 
 class EdgeExtractor:
-    def __init__(self, llm_client, model_name: str, time_logger: Optional[TimeLogger] = None, search_batch_size: int = 64):
+    def __init__(self, llm_client, model_name: str, search_batch_size: int = 64, linker_batch_size: int = 256):
         self.llm_client = llm_client
         self.model_name = model_name
-        self.time_logger = time_logger
+        # self.time_logger removed
+
         
         # Initialize Krissbert EntityLinker
         try:
@@ -35,7 +36,8 @@ class EdgeExtractor:
             self.entity_linker = EntityLinker(
                 model_name_or_path=krissbert_path,
                 device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu",
-                search_batch_size=search_batch_size
+                search_batch_size=search_batch_size,
+                batch_size=linker_batch_size
             )
             # logger.info("EntityLinker initialized successfully.")
         except Exception as e:
@@ -45,7 +47,7 @@ class EdgeExtractor:
     # Removed _cached_biosyn_predict as it is no longer used
     
 
-    def extract(self, text: str, nodes: Union[List[Dict], ValidatedEntity], file_name: str = "unknown") -> Tuple[ExtractedEdges, List[Dict]]:  
+    def extract(self, text: str, nodes: Union[List[Dict], ValidatedEntity], file_name: str = "unknown", time_logger: Optional[TimeLogger] = None) -> Tuple[ExtractedEdges, List[Dict]]:  
         """Extract relationships using entities and compact UMLS features. Returns edges and new Level 2 nodes."""
         if not text or not text.strip():
             return ExtractedEdges(edges=[]), []
@@ -79,8 +81,8 @@ class EdgeExtractor:
         ref_to_edges = []
         
         if self.entity_linker:
-            if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: Krissbert Linking"):
+            if time_logger:
+                with Timer(time_logger, file_name, "edge_krissbert"):
                     level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
             else:
                 level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
@@ -108,8 +110,8 @@ class EdgeExtractor:
                      logger.error(f"Unexpected response type from LLM: {type(resp)}")
                      return ExtractedEdges(edges=[])
 
-            if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: LLM Generation"):
+            if time_logger:
+                with Timer(time_logger, file_name, "edge_llm"):
                     llm_edges_result = _generate_structured()
             else:
                 llm_edges_result = _generate_structured()

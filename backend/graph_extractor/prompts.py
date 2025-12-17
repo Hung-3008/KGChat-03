@@ -14,286 +14,148 @@ Text:
 """
 
 
-ACTIVITY_PROMPT = '''You are an expert clinical entity extraction system. Your task is to extract entities from clinical text and categorize them into the appropriate activity types.
+ACTIVITY_PROMPT = '''Extract clinical activity entities from the text.
 
-The "activity" cluster includes these semantic types:
-- Activity: General activities
-- Behavior: General behaviors
-- Social_Behavior: Social interactions and behaviors
-- Individual_Behavior: Personal behaviors
-- Daily_or_Recreational_Activity: Daily routines, hobbies, leisure activities
-- Occupational_Activity: Work-related activities
-- Health_Care_Activity: Healthcare-related activities
-- Laboratory_Procedure: Lab tests and procedures
-- Diagnostic_Procedure: Diagnostic tests and examinations
-- Therapeutic_or_Preventive_Procedure: Treatments, therapies, preventive measures
-- Research_Activity: Research-related activities
-- Molecular_Biology_Research_Technique: Molecular biology research methods
-- Governmental_or_Regulatory_Activity: Regulatory, governmental activities
-- Educational_Activity: Educational activities, teaching, learning
-- Machine_Activity: Machine operations, automated processes
+Key semantic types:
+- Laboratory_Procedure: Lab tests (e.g., "blood test", "biopsy")
+- Diagnostic_Procedure: Diagnostic tests (e.g., "MRI", "CT scan")
+- Therapeutic_or_Preventive_Procedure: Treatments (e.g., "surgery", "chemotherapy")
+- Health_Care_Activity: Healthcare activities
 
-Instructions:
-1. Extract EXACT text spans as they appear in the document
-2. Categorize each entity into the MOST SPECIFIC semantic type that matches
-3. If NO entities are found for a semantic type, return an empty list for that field
-4. Return ONLY valid JSON in the exact format specified by the schema
-5. DO NOT include any additional text, explanations, or formatting outside the JSON structure
-6. EXTRACT ONLY ATOMIC ENTITIES - Never extract phrases containing multiple activities or actions combined with medications, devices, or other non-activity elements.
-
-### HALLUCINATION BLOCKER & FILTERING RULES:
-1. IGNORE general daily activities (e.g., "eating", "sleeping", "walking") unless they are specifically mentioned as part of a treatment plan or symptom.
-2. IGNORE general behaviors ("coping", "adapting") unless clinically significant.
-3. FOCUS on:
-    - Diagnostic Procedures (e.g., "MRI", "blood test")
-    - Therapeutic Procedures (e.g., "surgery", "chemotherapy")
-    - Laboratory Procedures
-4. DO NOT extract verbs acting as connectors (e.g., "revealed", "showed", "treated with").
+Rules:
+1. Extract EXACT text spans only
+2. Use MOST SPECIFIC semantic type available
+3. FOCUS on clinical procedures and tests
+4. IGNORE: general daily activities, connector verbs, non-clinical behaviors
+5. Return valid JSON matching the schema
 
 Text:
 [INPUT TEXT]
 '''
 
-PHENOMENON_PROMPT = '''You are an expert clinical entity extraction system. Your task is to extract entities from clinical text and categorize them into the appropriate phenomenon types.
+PHENOMENON_PROMPT = '''Extract clinical phenomenon entities from the text.
 
-The "phenomenon" cluster includes these semantic types:
-- Phenomenon_or_Process: General phenomena or processes
-- Injury_or_Poisoning: Injuries or poisonings
-- Human_caused_Phenomenon_or_Process: Phenomena or processes caused by humans
-- Environmental_Effect_of_Humans: Environmental effects caused by human activities
-- Natural_Phenomenon_or_Process: Natural phenomena or processes
-- Biologic_Function: Biological functions
-- Physiologic_Function: Physiological functions
-- Organism_Function: Functions of organisms
-- Mental_Process: Mental processes
-- Organ_or_Tissue_Function: Functions of organs or tissues
-- Cell_Function: Cellular functions
-- Molecular_Function: Molecular functions
-- Genetic_Function: Genetic functions
-- Cell_or_Molecular_Dysfunction: Dysfunctions at cellular or molecular level
-- Pathologic_Function: Pathological functions
+Key semantic types:
 - Disease_or_Syndrome: Diseases or syndromes
-- Mental_or_Behavioral_Dysfunction: Mental or behavioral dysfunctions
-- Neoplastic_Process: Neoplastic processes (tumor/cancer-related)
-- Experimental_Model_of_Disease: Experimental models of diseases
+- Neoplastic_Process: Cancer/tumor-related processes
+- Injury_or_Poisoning: Injuries or poisonings
+- Pathologic_Function: Pathological functions
+- Mental_or_Behavioral_Dysfunction: Mental/behavioral dysfunctions
+- Sign_or_Symptom: Clinical signs or symptoms
 
-Instructions:
-1. Extract EXACT text spans as they appear in the document.
-2. Categorize each entity into the MOST SPECIFIC semantic type that matches.
-3. If NO entities are found for a semantic type, return an empty list for that field.
-
-### HALLUCINATION BLOCKER & FILTERING RULES:
-1. PRIORITIZE "Disease_or_Syndrome", "Neoplastic_Process", "Injury_or_Poisoning", and "Pathologic_Function".
-2. EXCLUDE general biological functions (e.g., "metabolism", "growth") unless they are explicitly described as abnormal or part of a disease mechanism.
-3. EXCLUDE general "Phenomenon_or_Process" unless it is a specific clinical event.
-4. DO NOT extract "cancer" or "tumor" if specific types are mentioned (extract the specific type instead).
+Rules:
+1. Extract EXACT text spans only
+2. Use MOST SPECIFIC semantic type
+3. PRIORITIZE diseases, cancers, injuries, and pathologic functions
+4. IGNORE: general biological functions unless explicitly abnormal
+5. Return valid JSON matching the schema
 
 Text:
 [INPUT TEXT]
 '''
 
-PHYSICAL_OBJECT_PROMPT = '''You are an expert clinical entity extraction system. Your task is to extract entities from clinical text and categorize them into the appropriate physical object types.
+PHYSICAL_OBJECT_PROMPT = '''Extract clinical physical object entities from the text.
 
-The "physical_object" cluster includes these semantic types:
-- Physical_Object: General physical objects
-- Organism: Living organisms
-- Virus: Viruses
-- Bacterium: Bacteria
-- Archaeon: Archaeons
-- Eukaryote: Eukaryotes
-- Plant: Plants
-- Fungus: Fungi
-- Animal: Animals
-- Vertebrate: Vertebrates
-- Amphibian: Amphibians
-- Bird: Birds
-- Fish: Fish
-- Reptile: Reptiles
-- Mammal: Mammals
-- Human: Humans
-- Anatomical_Structure: Anatomical structures
-- Embryonic_Structure: Embryonic structures
-- Fully_Formed_Anatomical_Structure: Fully formed anatomical structures
-- Body_Part_Organ_or_Organ_Component: Body parts, organs, or organ components
+Key semantic types:
+- Body_Part_Organ_or_Organ_Component: Organs, body parts
 - Tissue: Tissues
 - Cell: Cells
-- Cell_Component: Cell components
 - Gene_or_Genome: Genes or genomes
-- Anatomical_Abnormality: Anatomical abnormalities
-- Congenital_Abnormality: Congenital abnormalities
-- Acquired_Abnormality: Acquired abnormalities
-- Manufactured_Object: Manufactured objects
-- Medical_Device: Medical devices
-- Drug_Delivery_Device: Drug delivery devices
-- Research_Device: Research devices
 - Clinical_Drug: Clinical drugs
-- Substance: Substances
-- Body_Substance: Body substances
-- Chemical: Chemicals
-- Chemical_Viewed_Structurally: Chemicals viewed structurally
-- Organic_Chemical: Organic chemicals
-- Nucleic_Acid_Nucleoside_or_Nucleotide: Nucleic acids, nucleosides, or nucleotides
-- Amino_Acid_Peptide_or_Protein: Amino acids, peptides, or proteins
-- Element_Ion_or_Isotope: Elements, ions, or isotopes
-- Inorganic_Chemical: Inorganic chemicals
-- Chemical_Viewed_Functionally: Chemicals viewed functionally
-- Pharmacologic_Substance: Pharmacologic substances
-- Antibiotic: Antibiotics
-- Biomedical_or_Dental_Material: Biomedical or dental materials
-- Biologically_Active_Substance: Biologically active substances
+- Pharmacologic_Substance: Medications
+- Medical_Device: Medical devices
+- Anatomical_Abnormality: Anatomical abnormalities
+- Amino_Acid_Peptide_or_Protein: Proteins, peptides
 - Hormone: Hormones
 - Enzyme: Enzymes
-- Vitamin: Vitamins
-- Immunologic_Factor: Immunologic factors
-- Receptor: Receptors
-- Indicator_Reagent_or_Diagnostic_Aid: Indicator reagents or diagnostic aids
-- Hazardous_or_Poisonous_Substance: Hazardous or poisonous substances
-- Food: Foods
+- Bacterium: Bacteria
+- Virus: Viruses
 
-Instructions:
-1. Extract EXACT text spans as they appear in the document.
-
-### HALLUCINATION BLOCKER & FILTERING RULES:
-1. FOCUS on:
-   - Anatomical Structures (Organs, Tissues)
-   - Chemicals & Drugs (Clinical_Drug, Pharmacologic_Substance)
-   - Genes & Proteins
-2. EXCLUDE general "Physical_Object" or "Manufactured_Object" unless it is a specific Medical Device involved in care.
-3. EXCLUDE "Human", "Patient", "Man", "Woman" unless used in a specific specific context (e.g. "Human anti-mouse antibody").
-4. EXCLUDE common food items unless discussed as allergens or dietary treatments.
+Rules:
+1. Extract EXACT text spans only
+2. FOCUS on: anatomical structures, drugs, medical devices, genes/proteins
+3. IGNORE: generic terms like "human", "patient", common foods (unless allergens)
+4. Return valid JSON matching the schema
 
 Text:
 [INPUT TEXT]'''
 
-CONCEPTUAL_ENTITY_PROMPT = '''You are an expert clinical entity extraction system. Your task is to extract entities from clinical text and categorize them into the appropriate conceptual entity types.
+CONCEPTUAL_ENTITY_PROMPT = '''Extract clinical conceptual entities from the text.
 
-The "conceptual_entity" cluster includes these semantic types:
-- Conceptual_Entity: General conceptual entities
-- Organism_Attribute: Attributes of organisms
-- Clinical_Attribute: Clinical attributes
-- Finding: Findings
-- Laboratory_or_Test_Result: Laboratory or test results
+Key semantic types:
+- Finding: Clinical findings
 - Sign_or_Symptom: Signs or symptoms
-- Idea_or_Concept: Ideas or concepts
-- Temporal_Concept: Temporal concepts (time-related)
-- Qualitative_Concept: Qualitative concepts (descriptive qualities)
-- Quantitative_Concept: Quantitative concepts (numerical measurements)
-- Spatial_Concept: Spatial concepts (location, position, direction)
+- Laboratory_or_Test_Result: Lab or test results
+- Clinical_Attribute: Clinical attributes
 - Body_Location_or_Region: Body locations or regions
-- Body_Space_or_Junction: Body spaces or junctions
-- Geographic_Area: Geographic areas
-- Molecular_Sequence: Molecular sequences
-- Nucleotide_Sequence: Nucleotide sequences
-- Amino_Acid_Sequence: Amino acid sequences
-- Carbohydrate_Sequence: Carbohydrate sequences
-- Functional_Concept: Functional concepts
-- Body_System: Body systems
-- Occupation_or_Discipline: Occupations or disciplines
-- Biomedical_Occupation_or_Discipline: Biomedical occupations or disciplines
-- Organization: Organizations
-- Health_Care_Related_Organization: Health care related organizations
-- Professional_Society: Professional societies
-- Self_help_or_Relief_Organization: Self-help or relief organizations
-- Group: Groups
-- Professional_or_Occupational_Group: Professional or occupational groups
-- Population_Group: Population groups
-- Family_Group: Family groups
-- Age_Group: Age groups
-- Patient_or_Disabled_Group: Patient or disabled groups
-- Group_Attribute: Group attributes
-- Intellectual_Product: Intellectual products
-- Regulation_or_Law: Regulations or laws
-- Classification: Classifications
-- Language: Languages
+- Quantitative_Concept: Numerical measurements (scores, values)
 
-Instructions:
-1. Extract EXACT text spans as they appear in the document.
-
-### HALLUCINATION BLOCKER & FILTERING RULES:
-1. STRICT FILTERING: This category is prone to noise. Only extract IF CLINICALLY RELEVANT.
-2. FOCUS on:
-   - "Finding", "Sign_or_Symptom", "Laboratory_or_Test_Result"
-   - "Clinical_Attribute"
-   - "Body_Location_or_Region"
-3. AGGRESSIVELY EXCLUDE:
-   - "Idea_or_Concept", "Conceptual_Entity", "Functional_Concept", "Qualitative_Concept", "Quantitative_Concept" (UNLESS it is a specific score or critical measurement).
-   - "Temporal_Concept" (dates, times, durations) UNLESS critical for disease progression.
-   - "Classification", "Regulation_or_Law", "Language", "Intellectual_Product".
-4. Do NOT extract generic terms like "results", "study", "analysis", "data", "time", "group".
+Rules:
+1. Extract EXACT text spans only
+2. FOCUS on: findings, signs/symptoms, test results, body locations
+3. IGNORE: generic terms like "study", "analysis", "data", "time", "group"
+4. IGNORE temporal/spatial concepts unless critical for disease progression
+5. Return valid JSON matching the schema
 
 Text:
 [INPUT TEXT]'''
 
 
-CONTEXT_ENTITY_FILTER_PROMPT = """You are an expert clinical entity validation system. Your task is to review entities that have already passed hierarchical filtering and make final determinations about which entities should be kept based on clinical context and semantic appropriateness.
+COMBINED_ENTITY_PROMPT = '''You are a medical entity extraction expert. Extract clinical entities from the text and organize them into four clusters: activity, phenomenon, physical_object, conceptual_entity.
 
-## INPUT STRUCTURE
-You will receive:
-1. The original clinical text passage
-2. A list of entities grouped by semantic cluster and semantic type
-3. Information about which entities share the same hierarchical depth (same specificity level)
+Rules:
+- Extract exact spans from the text, prefer the most specific semantic type.
+- Ignore generic/non-clinical items, keep clinically meaningful concepts.
+- Return valid JSON following the provided schema.
 
-## FILTERING CRITERIA
-For each entity that shares the same hierarchical depth with other entities, evaluate whether it should be kept based on:
+Clusters and semantic types:
+1) activity: Laboratory_Procedure, Diagnostic_Procedure, Therapeutic_or_Preventive_Procedure, Health_Care_Activity, Research_Activity, Molecular_Biology_Research_Technique, Educational_Activity, Governmental_or_Regulatory_Activity, Machine_Activity, Daily_or_Recreational_Activity, Occupational_Activity, Activity, Behavior, Social_Behavior, Individual_Behavior
+2) phenomenon: Disease_or_Syndrome, Neoplastic_Process, Injury_or_Poisoning, Pathologic_Function, Mental_or_Behavioral_Dysfunction, Phenomenon_or_Process, Human_caused_Phenomenon_or_Process, Environmental_Effect_of_Humans, Natural_Phenomenon_or_Process, Biologic_Function, Physiologic_Function, Organism_Function, Organ_or_Tissue_Function, Cell_Function, Molecular_Function, Genetic_Function, Cell_or_Molecular_Dysfunction, Experimental_Model_of_Disease, Mental_Process
+3) physical_object: Body_Part_Organ_or_Organ_Component, Tissue, Cell, Cell_Component, Gene_or_Genome, Anatomical_Abnormality, Congenital_Abnormality, Acquired_Abnormality, Clinical_Drug, Pharmacologic_Substance, Antibiotic, Medical_Device, Drug_Delivery_Device, Research_Device, Indicator_Reagent_or_Diagnostic_Aid, Biologically_Active_Substance, Hormone, Enzyme, Vitamin, Immunologic_Factor, Receptor, Chemical_Viewed_Structurally, Chemical_Viewed_Functionally, Organic_Chemical, Inorganic_Chemical, Amino_Acid_Peptide_or_Protein, Nucleic_Acid_Nucleoside_or_Nucleotide, Element_Ion_or_Isotope, Substance, Body_Substance, Manufactured_Object, Physical_Object, Organism, Virus, Bacterium, Archaeon, Eukaryote, Plant, Fungus, Animal, Vertebrate, Amphibian, Bird, Fish, Reptile, Mammal, Human, Food, Research_Device
+4) conceptual_entity: Finding, Sign_or_Symptom, Laboratory_or_Test_Result, Clinical_Attribute, Body_Location_or_Region, Body_Space_or_Junction, Body_System, Quantitative_Concept, Qualitative_Concept, Temporal_Concept, Spatial_Concept, Functional_Concept, Molecular_Sequence, Nucleotide_Sequence, Amino_Acid_Sequence, Carbohydrate_Sequence, Organism_Attribute, Conceptual_Entity, Idea_or_Concept, Population_Group, Patient_or_Disabled_Group, Age_Group, Group, Professional_or_Occupational_Group, Biomedical_Occupation_or_Discipline, Health_Care_Related_Organization, Organization, Classification, Regulation_or_Law, Intellectual_Product, Language, Geographic_Area
 
-1. CONTEXTUAL APPROPRIATENESS:
-   - Does the entity appear as a core concept in the clinical narrative (not just mentioned in passing)?
-   - Is the entity explicitly relevant to the patient's case described in the text?
-   - Is the entity free from negation or uncertainty markers (e.g., "no evidence of", "rule out", "possible") unless specifically about ruling out conditions?
-
-2. SEMANTIC FIT:
-   - Does the entity truly belong to its assigned semantic type in this specific context?
-   - For example: "Aspirin" is a medication (Clinical_Drug) but if mentioned in the context of "aspirin allergy", it becomes an allergen (not a treatment).
-
-3. CLINICAL SIGNIFICANCE:
-   - Is the entity clinically meaningful in this context?
-   - Does it represent a direct observation or intervention rather than a general reference?
-
-## SPECIFIC RULES
-1. For entities with identical text but different semantic types at the same depth:
-   - Keep only the entity with the most clinically relevant semantic type for this context
-   - Example: "MRI" could be a Diagnostic_Procedure or a Machine_Activity, but in clinical context, Diagnostic_Procedure is more relevant
-
-2. For entity phrases that contain other entities:
-   - Keep the more specific phrase if it provides additional clinical context
-   - Example: Keep "lesion in the left temporal lobe" instead of just "lesion" if both exist at same depth
-   - Exception: Keep the simpler entity if the longer phrase includes non-clinical modifiers
-
-3. For ambiguous entities:
-   - When uncertain, prefer keeping entities that directly relate to patient diagnosis, treatment, or symptoms
-   - Remove entities that are merely examples, hypothetical scenarios, or general knowledge references
-
-
-- Include ONLY entities that pass your validation
-- Preserve the exact text of entities as they appear in the input
-- If an ENTIRE semantic type has no valid entities, omit it completely (don't include empty arrays)
-- In removal_explanations, document each removed entity with a concise reason (max 15 words)
-- Extract the mention text for each entity from the original clinical text
-
-## CLINICAL TEXT
-[CLINICAL_INPUT_TEXT]
-
-## ENTITIES TO EVALUATE
-[ENTITIES_INPUT]
-
-## OUTPUT INSTRUCTIONS
-Return ONLY a valid JSON object with the following structure:
+Output JSON schema (strict):
 {
-  "entities": [
-    {
-      "name": "canonical name",
-      "semantic_type": "specific semantic type",
-      "mention": "exact text from document"
-    }
-  ]
+  "activity": {"SemanticType": ["entity", ...], ...},
+  "phenomenon": {"SemanticType": ["entity", ...], ...},
+  "physical_object": {"SemanticType": ["entity", ...], ...},
+  "conceptual_entity": {"SemanticType": ["entity", ...], ...}
 }
 
-## REMEMBER
-- Focus on CLINICAL RELEVANCE in THIS SPECIFIC CONTEXT
-- Be STRICT about entity boundaries and semantic type appropriateness
-- When in doubt about ambiguous entities, prioritize those directly related to patient care
-- DO NOT invent new entities or modify existing entity text
-- DO NOT include any text outside the required JSON structure
+Text:
+[INPUT TEXT]
+'''
+
+
+CONTEXT_ENTITY_FILTER_PROMPT = """Validate clinical entities extracted from text.
+
+INPUT:
+1. Clinical text passage
+2. List of entities with semantic types
+
+VALIDATION RULES:
+1. Keep entities that are:
+   - Core concepts in the clinical narrative
+   - Free from negation (e.g., "no evidence of", "rule out")
+   - Clinically meaningful in this context
+
+2. Remove entities that are:
+   - Mentioned only in passing
+   - Generic or ambiguous references
+   - Duplicates with different semantic types (keep most clinically relevant)
+
+CLINICAL TEXT:
+[CLINICAL_INPUT_TEXT]
+
+ENTITIES TO EVALUATE:
+[ENTITIES_INPUT]
+
+OUTPUT: Return ONLY valid JSON with this structure:
+{
+  "entities": [
+    {"name": "canonical name", "semantic_type": "type", "mention": "exact text from document"}
+  ]
+}
 """
 
 EDGE_EXTRACTION_PROMPT = """
@@ -320,42 +182,3 @@ Provided entities (exact names):
 
 Return a JSON object with a key "edges" containing a list of relationship objects.
 """
-
-EDGE_VALIDATION_PROMPT = """
-Here is the English translation of the prompt:
-
-"You are a clinical medical expert with 15 years of experience, and also an auditor for a medical knowledge graph system. Your task is to VERIFY THE ACCURACY of the proposed relationships extracted from a medical text, based on 3 strict criteria:
-1. DIRECT EVIDENCE (Must be an exact citation from the text)
-2. CLINICAL PLAUSIBILITY (Consistent with treatment guidelines & pathogenesis)
-3. CONSISTENCY (Must not contradict other information in the text)
-
-### INPUT TO PROCESS
-Medical Text:
-[INPUT TEXT]
-
-LIST OF VALID ENTITIES (Only use entities in this list):
-[ENTITY_LIST]
-
-PROPOSED RELATIONSHIPS to verify:
-[PROPOSED_RELATIONSHIPS]
-
-### MANDATORY VERIFICATION RULES
-1. HALLUCINATION BLOCKER:
-   - IMMEDIATELY REJECT if:
-      - An Entity does not exist in the LIST OF VALID ENTITIES
-      - The Relation is not in the allowed list:
-        [diagnoses, detects, observes, treats, side_effect_of, associated_with, contraindicated_with, administered_for, caused_by]
-      - The Evidence consists of >1 sentence or does not contain BOTH entities in the same sentence.
-   - ONLY ACCEPT if there is an EXACT, WORD-FOR-WORD CITATION containing both entities and the stated relationship.
-
-2. CLINICAL CHECK:
-   - Use domain expertise to detect:
-      - Drug not indicated for the disease (e.g., Lisinopril does not treat diabetes)
-      - Illogical causal relationships (e.g., E. coli infection does not cause elevated HbA1c)
-      - Incorrect diagnostic attribution (e.g., "family history of X" != "patient has X")
-
-3. HANDLING AMBIGUITY:
-   - If the evidence is unclear -> REJECT instead of inferring.
-   - If the relation is close but imprecise -> PROPOSE A CORRECTION (e.g., Replace "causes" with "associated_with_elevated_levels").
-"""
-

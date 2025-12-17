@@ -30,7 +30,7 @@ class TransformerEncoder:
         sum_mask = torch.clamp(input_mask_expanded.sum(dim=1), min=1e-9)
         return sum_embeddings / sum_mask
 
-    def embed(self, texts: List[str], batch_size: int = 32, normalize: bool = True) -> torch.Tensor:
+    def embed(self, texts: List[str], batch_size: int = 64, normalize: bool = True) -> torch.Tensor:
         if not isinstance(texts, (list, tuple)):
             raise ValueError("`texts` must be a list of strings")
         if len(texts) == 0:

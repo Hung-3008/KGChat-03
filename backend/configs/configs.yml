@@ -1,6 +1,6 @@
 LLM:
   client: ollama
-  model: llama3.1:8b
+  model: llama3.2:3b
   temperature: 0.85
   top_p: 1.0
   seed: 42
@@ -13,12 +13,14 @@ Gemini:
 Encoder:
   model_name: dmis-lab/biobert-v1.1
   device: cuda
+  batch_size: 96 
 
 Create:
   Batch_size: 10
-  Limit: null
+  Limit: Null
   Resume: True
-  max_parallel_chunks: 3
+  max_parallel_chunks: 6
+  max_parallel_files: 8   
 
 Insert:
   Batch_size: 1
@@ -27,5 +29,6 @@ Insert:
 
 Qdrant:
   timeout: 300 
-  search_batch_size: 10 
+  search_batch_size: 16 
+  linker_batch_size: 320 
 

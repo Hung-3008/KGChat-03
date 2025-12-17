@@ -25,39 +25,44 @@ class SectionChunker:
 
     def _merge_chunks(self, chunks: List[str]) -> List[str]:
         """
-        Merge small chunks if there are too many chunks.
-        Rule: If chunks > 5, merge chunks with < 1000 tokens into the next chunk.
+        Merge to keep chunk count small and reduce LLM calls.
+        - If more than 3 chunks, merge small ones into the next until token ~1800.
+        - Target: <= 3 chunks to limit per-file LLM traffic.
         """
-        if len(chunks) <= 5:
+        if len(chunks) <= 3:
             return chunks
 
         try:
             import tiktoken
             enc = tiktoken.get_encoding("cl100k_base")
         except ImportError:
-            # Fallback if tiktoken not installed, though it should be
             return chunks
 
-        merged_chunks = []
+        merged_chunks: List[str] = []
         current_chunk = ""
-        
-        for i, chunk in enumerate(chunks):
+
+        def token_len(text: str) -> int:
+            return len(enc.encode(text)) if text else 0
+
+        for chunk in chunks:
             if not current_chunk:
                 current_chunk = chunk
+                continue
+
+            if token_len(current_chunk) < 1800:
+                current_chunk += "\n\n" + chunk
             else:
-                # Check token count of current_chunk
-                tokens = enc.encode(current_chunk)
-                if len(tokens) < 1000:
-                    # Merge with next chunk (current iteration)
-                    current_chunk += "\n\n" + chunk
-                else:
-                    # Current chunk is big enough, append it and start new
-                    merged_chunks.append(current_chunk)
-                    current_chunk = chunk
-        
+                merged_chunks.append(current_chunk)
+                current_chunk = chunk
+
         if current_chunk:
             merged_chunks.append(current_chunk)
-            
+
+        # If still too many, greedily merge last ones
+        while len(merged_chunks) > 3:
+            last = merged_chunks.pop()
+            merged_chunks[-1] = merged_chunks[-1] + "\n\n" + last
+
         return merged_chunks
 
 

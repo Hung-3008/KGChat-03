@@ -1,8 +1,10 @@
+import csv
 import os
 import sys
+import time
 import yaml
 from pathlib import Path
-from typing import List
+from typing import Optional
 import logging
 
 # Add project root to sys.path
@@ -13,7 +15,39 @@ if project_root not in sys.path:
 from backend.graph_extractor.graph_extract import GraphExtractor
 from backend.utils.time_logger import TimeLogger, setup_logger, Timer
 
-logger = setup_logger("create_graph")
+logger = setup_logger("create_graph", log_file=Path("output/create_graph.log"))
+
+_EXTRACTOR: Optional[GraphExtractor] = None
+
+def _get_extractor(config_path: str) -> GraphExtractor:
+    """Get the singleton GraphExtractor instance."""
+    global _EXTRACTOR
+    if _EXTRACTOR is None:
+        _EXTRACTOR = GraphExtractor(config_path=config_path)
+    return _EXTRACTOR
+
+
+def append_csv(temp_path: Path, dest_handle, has_header: bool) -> bool:
+    """Append a CSV file to an open destination handle, writing header only once."""
+    if not temp_path or not temp_path.exists():
+        return has_header
+
+    with temp_path.open("r", encoding="utf-8") as src:
+        header = src.readline()
+        if not header:
+            temp_path.unlink(missing_ok=True)
+            return has_header
+
+        if not has_header:
+            dest_handle.write(header)
+            has_header = True
+        # Skip header if dest already has one
+        for line in src:
+            dest_handle.write(line)
+
+    dest_handle.flush()
+    temp_path.unlink(missing_ok=True)
+    return has_header
 
 def load_config(config_path: str) -> dict:
     path = Path(config_path)
@@ -22,8 +56,70 @@ def load_config(config_path: str) -> dict:
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
+def process_single_file(args):
+    """Process a single file and return nodes, edges, and filename.
+    This must be a module-level function for ProcessPoolExecutor pickling.
+    """
+    file_path, config_path, output_dir = args
+    
+    try:
+        # Each process needs its own logger instance, but shouldn't write to file directly
+        # to avoid race conditions. We'll return the stats to the main process instead.
+        time_logger = TimeLogger(output_dir / "time_log.csv", write_to_file=False)
+        time_logger.start_file(file_path.name)
+
+        extractor = _get_extractor(config_path=config_path)
+        
+        logger.info(f"Processing: {file_path.name}")
+
+        start_time = time.time()
+        nodes, edges = extractor.extract_from_file(str(file_path), time_logger=time_logger)
+        total_duration = time.time() - start_time
+
+        temp_dir = output_dir / "tmp_results"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        nodes_path = None
+        edges_path = None
+
+        if nodes:
+            nodes_path = temp_dir / f"{file_path.stem}__nodes.csv"
+            extractor.save_nodes(nodes, nodes_path, append=False)
+
+        if edges:
+            edges_path = temp_dir / f"{file_path.stem}__edges.csv"
+            extractor.save_edges(edges, edges_path, append=False)
+
+        # Get stats but don't write to file here
+        timing_stats = time_logger.get_file_stats(file_path.name, total_duration)
+
+        logger.info(f"✓ Completed {file_path.name}: {len(nodes)} nodes, {len(edges)} edges")
+        return {
+            'filename': file_path.name,
+            'nodes_path': nodes_path,
+            'edges_path': edges_path,
+            'timing_stats': timing_stats,
+            'nodes_count': len(nodes),
+            'edges_count': len(edges),
+            'success': True,
+            'error': None
+        }
+    except Exception as e:
+        logger.error(f"✗ Failed {file_path.name}: {e}")
+        import traceback
+        return {
+            'filename': file_path.name,
+            'nodes_path': None,
+            'edges_path': None,
+            'success': False,
+            'error': str(e) + "\n" + traceback.format_exc()
+        }
+
 def main():
     import argparse
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import threading
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/configs.yml", help="Path to config file")
     args = parser.parse_args()
@@ -35,6 +131,7 @@ def main():
     batch_size = create_config.get("Batch_size", 10)
     limit = create_config.get("Limit")
     resume = create_config.get("Resume", False)
+    max_parallel_files = create_config.get("max_parallel_files", 1)
     
     data_dir = Path("/home/nguyenthang/Bản tải về/PMC_Part3")
     if not data_dir.exists():
@@ -49,16 +146,20 @@ def main():
     
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
-    
-    # Initialize TimeLogger
-    time_logger = TimeLogger(output_dir / "time_log.csv")
-    
-    # Pass time_logger to GraphExtractor
-    extractor = GraphExtractor(config_path=config_path, time_logger=time_logger)
-    
+
+    temp_dir = output_dir / "tmp_results"
+    temp_dir.mkdir(exist_ok=True)
+
     nodes_path = output_dir / "nodes.csv"
     edges_path = output_dir / "edges.csv"
+    time_log_path = output_dir / "time_log.csv"
     log_path = output_dir / "processed_files.txt"
+
+    # Initialize TimeLogger in main process to get fieldnames without touching disk
+    main_time_logger = TimeLogger(time_log_path, write_to_file=False)
+
+    # Thread lock for file writing
+    file_lock = threading.Lock()
     
     processed_files = set()
     
@@ -76,6 +177,11 @@ def main():
             edges_path.unlink()
         if log_path.exists():
             log_path.unlink()
+        if time_log_path.exists():
+            time_log_path.unlink()
+        if temp_dir.exists():
+            for f in temp_dir.glob("*"):
+                f.unlink()
             
     # Filter files if resuming
     files_to_process = [f for f in all_files if f.name not in processed_files]
@@ -93,44 +199,106 @@ def main():
     if not files_to_process:
         return
 
-    # Process in batches
-    for i in range(0, len(files_to_process), batch_size):
-        batch_files = files_to_process[i : i + batch_size]
-        
-        batch_nodes = []
-        batch_edges = []
-        successful_files = []
-        
-        for idx, file_path in enumerate(batch_files):
-            current_file_num = i + idx + 1
-            logger.info(f"Processing file {current_file_num}/{total_to_process}: {file_path.name}")
-            
+    logger.info(f"Processing {total_to_process} files with {max_parallel_files} workers")
+
+    # Prepare shared file handles
+    nodes_handle = nodes_path.open("a", encoding="utf-8")
+    edges_handle = edges_path.open("a", encoding="utf-8")
+    processed_handle = log_path.open("a", encoding="utf-8")
+    time_log_handle = time_log_path.open("a", newline="", encoding="utf-8")
+    time_log_writer = csv.DictWriter(time_log_handle, fieldnames=main_time_logger.fieldnames)
+
+    nodes_has_header = nodes_path.exists() and nodes_path.stat().st_size > 0
+    edges_has_header = edges_path.exists() and edges_path.stat().st_size > 0
+    if not (time_log_path.exists() and time_log_path.stat().st_size > 0):
+        time_log_writer.writeheader()
+        time_log_handle.flush()
+
+    # Process files
+    completed_count = 0
+
+    try:
+        if max_parallel_files <= 1:
+            logger.info("Single-worker mode: running sequentially (no process pool) for easier interrupt.")
             try:
-                with Timer(time_logger, file_path.name, "Total File Processing"):
-                    nodes, edges = extractor.extract_from_file(str(file_path))
-                    batch_nodes.extend(nodes)
-                    batch_edges.extend(edges)
-                logger.info(f"✓ Completed {file_path.name}: {len(nodes)} nodes, {len(edges)} edges")
-                successful_files.append(file_path.name)
-            except Exception as e:
-                logger.error(f"✗ Failed {file_path.name}: {e}")
-        
-        # Save batch results
-        if batch_nodes or batch_edges:
-            extractor.save_nodes(batch_nodes, nodes_path, append=True)
-            extractor.save_edges(batch_edges, edges_path, append=True)
-        
-        # Update log
-        if successful_files:
-            with log_path.open("a", encoding="utf-8") as f:
-                for fname in successful_files:
-                    f.write(f"{fname}\n")
-        
-        # Clear RAM (variables)
-        del batch_nodes
-        del batch_edges
-        
-    logger.info(f"✓ Completed all {total_to_process} files")
+                for file_path in files_to_process:
+                    result = process_single_file((file_path, config_path, output_dir))
+
+                    if result['success']:
+                        with file_lock:
+                            nodes_has_header = append_csv(result.get('nodes_path'), nodes_handle, nodes_has_header)
+                            edges_has_header = append_csv(result.get('edges_path'), edges_handle, edges_has_header)
+
+                            if result.get('timing_stats'):
+                                time_log_writer.writerow(result['timing_stats'])
+                                time_log_handle.flush()
+
+                            processed_handle.write(f"{result['filename']}\n")
+                            processed_handle.flush()
+
+                        completed_count += 1
+                        logger.info(f"Progress: {completed_count}/{total_to_process} files completed")
+                    else:
+                        logger.error(f"Failed to process {result['filename']}: {result['error']}")
+            except KeyboardInterrupt:
+                logger.warning("Interrupted by user; stopping sequential run and killing process group.")
+                import signal
+                try:
+                    os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+                except Exception as e:
+                    logger.error(f"Failed to kill process group: {e}")
+                return
+        else:
+            # Use ThreadPoolExecutor for thread-based parallelism (shares memory/VRAM)
+            with ThreadPoolExecutor(max_workers=max_parallel_files) as executor:
+                future_to_file = {
+                    executor.submit(process_single_file, (file_path, config_path, output_dir)): file_path 
+                    for file_path in files_to_process
+                }
+                try:
+                    for future in as_completed(future_to_file):
+                        file_path = future_to_file[future]
+                        completed_count += 1
+                        
+                        result = future.result()
+                        
+                        if result['success']:
+                            with file_lock:
+                                nodes_has_header = append_csv(result.get('nodes_path'), nodes_handle, nodes_has_header)
+                                edges_has_header = append_csv(result.get('edges_path'), edges_handle, edges_has_header)
+
+                                if result.get('timing_stats'):
+                                    time_log_writer.writerow(result['timing_stats'])
+                                    time_log_handle.flush()
+
+                                processed_handle.write(f"{result['filename']}\n")
+                                processed_handle.flush()
+
+                            logger.info(f"Progress: {completed_count}/{total_to_process} files completed")
+                        else:
+                            logger.error(f"Failed to process {result['filename']}: {result['error']}")
+                except KeyboardInterrupt:
+                    logger.warning("Interrupted by user; cancelling pending tasks and killing process group.")
+                    import signal
+                    try:
+                        # Kill the entire process group to ensure all children are terminated
+                        os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+                    except Exception as e:
+                        logger.error(f"Failed to kill process group: {e}")
+                        # Fallback to executor shutdown
+                        for future in future_to_file:
+                            future.cancel()
+                        executor.shutdown(wait=False, cancel_futures=True)
+                    return
+                except Exception as e:
+                    logger.error(f"Exception while processing {file_path.name}: {e}")
+    finally:
+        nodes_handle.close()
+        edges_handle.close()
+        processed_handle.close()
+        time_log_handle.close()
+
+    logger.info(f"✓ Completed {completed_count}/{total_to_process} files")
 
 if __name__ == "__main__":
     main()

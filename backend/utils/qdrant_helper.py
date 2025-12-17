@@ -12,11 +12,18 @@ logger = logging.getLogger("qdrant_helper")
 class QdrantHelper:
     def __init__(self):
         url = os.getenv("QDRANT_URL", "http://localhost:6333")
+        grpc_port = int(os.getenv("QDRANT_GRPC_PORT", "6334"))
         api_key = os.getenv("QDRANT_API_KEY", None)
         
         try:
-            self.client = QdrantClient(url=url, api_key=api_key, timeout=600)
-            logger.info("Connected to Qdrant")
+            self.client = QdrantClient(
+                url=url,
+                grpc_port=grpc_port,
+                prefer_grpc=True,  # Use gRPC for better performance (2-3x faster)
+                api_key=api_key,
+                timeout=600
+            )
+            logger.info(f"Connected to Qdrant with gRPC on port {grpc_port}")
         except Exception as e:
             logger.error(f"Failed to connect to Qdrant: {e}")
             raise

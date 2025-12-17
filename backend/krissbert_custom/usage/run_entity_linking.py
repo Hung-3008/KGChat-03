@@ -82,7 +82,7 @@ class EntityLinker:
         batch_size: int = 256,
         max_length: int = 64,
         device: str = "cuda",
-        search_batch_size: int = 5 # Default to 10 to avoid Qdrant timeouts
+        search_batch_size: int = 15 # Increased default for better throughput
     ):
         self.model_name_or_path = model_name_or_path
         self.entity_list_names = entity_list_names
