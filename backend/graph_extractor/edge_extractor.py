@@ -17,7 +17,7 @@ from backend.krissbert_custom.usage.run_entity_linking import EntityLinker
 logger = setup_logger("edge_extractor")
 
 class EdgeExtractor:
-    def __init__(self, llm_client, model_name: str, time_logger: Optional[TimeLogger] = None, search_batch_size: int = 64):
+    def __init__(self, llm_client, model_name: str, time_logger: Optional[TimeLogger] = None, search_batch_size: int = 64, linker_batch_size: int = 256):
         self.llm_client = llm_client
         self.model_name = model_name
         self.time_logger = time_logger
@@ -35,7 +35,8 @@ class EdgeExtractor:
             self.entity_linker = EntityLinker(
                 model_name_or_path=krissbert_path,
                 device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu",
-                search_batch_size=search_batch_size
+                search_batch_size=search_batch_size,
+                batch_size=linker_batch_size
             )
             # logger.info("EntityLinker initialized successfully.")
         except Exception as e:

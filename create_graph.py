@@ -171,7 +171,12 @@ def main():
                 else:
                     logger.error(f"Failed to process {result['filename']}: {result['error']}")
         except KeyboardInterrupt:
-            logger.warning("Interrupted by user; stopping sequential run.")
+            logger.warning("Interrupted by user; stopping sequential run and killing process group.")
+            import signal
+            try:
+                os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+            except Exception as e:
+                logger.error(f"Failed to kill process group: {e}")
             return
     else:
         # Use ProcessPoolExecutor for true parallelism
@@ -205,10 +210,17 @@ def main():
                     else:
                         logger.error(f"Failed to process {result['filename']}: {result['error']}")
             except KeyboardInterrupt:
-                logger.warning("Interrupted by user; cancelling pending tasks.")
-                for future in future_to_file:
-                    future.cancel()
-                executor.shutdown(wait=False, cancel_futures=True)
+                logger.warning("Interrupted by user; cancelling pending tasks and killing process group.")
+                import signal
+                try:
+                    # Kill the entire process group to ensure all children are terminated
+                    os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+                except Exception as e:
+                    logger.error(f"Failed to kill process group: {e}")
+                    # Fallback to executor shutdown
+                    for future in future_to_file:
+                        future.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
                 return
             except Exception as e:
                 logger.error(f"Exception while processing {file_path.name}: {e}")

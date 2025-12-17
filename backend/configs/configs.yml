@@ -13,13 +13,14 @@ Gemini:
 Encoder:
   model_name: dmis-lab/biobert-v1.1
   device: cuda
+  batch_size: 96  # Use larger GPU batch to better utilize 24GB VRAM
 
 Create:
   Batch_size: 10
   Limit: Null
   Resume: True
-  max_parallel_chunks: 4  # Favor chunk-level parallelism; keep models in one process
-  max_parallel_files: 1   # Avoid reloading heavy models across processes
+  max_parallel_chunks: 10
+  max_parallel_files: 1   
 
 Insert:
   Batch_size: 1
@@ -28,5 +29,6 @@ Insert:
 
 Qdrant:
   timeout: 300 
-  search_batch_size: 12  # Limit concurrent Qdrant queries to reduce I/O contention
+  search_batch_size: 16  # Slightly higher concurrency to leverage resources
+  linker_batch_size: 320  # Larger KrissBERT batch on 24GB VRAM
 

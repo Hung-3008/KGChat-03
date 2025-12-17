@@ -39,24 +39,28 @@ class GraphExtractor:
         encoder_config = self.configs.get("Encoder", {})
         embedding_model = encoder_config.get("model_name", "intfloat/multilingual-e5-base")
         device = encoder_config.get("device", "cpu")
+        embed_batch_size = encoder_config.get("batch_size", 64)
         
         self.node_extractor = NodeExtractor(
             llm_client=self.llm_client,
             model_name=self.llm_config.get("model", "gpt-like-model"),
             embedding_model=embedding_model,
             device=device,
-            time_logger=self.time_logger
+            time_logger=self.time_logger,
+            embed_batch_size=embed_batch_size
         )
         
         # Qdrant config
         qdrant_config = self.configs.get("Qdrant", {})
         search_batch_size = qdrant_config.get("search_batch_size", 64)
+        linker_batch_size = qdrant_config.get("linker_batch_size", 256)
         
         self.edge_extractor = EdgeExtractor(
             llm_client=self.llm_client,
             model_name=self.llm_config.get("model", "gpt-like-model"),
             time_logger=self.time_logger,
-            search_batch_size=search_batch_size
+            search_batch_size=search_batch_size,
+            linker_batch_size=linker_batch_size
         )
 
     def _load_config(self) -> dict:

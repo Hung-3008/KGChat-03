@@ -15,7 +15,7 @@ from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 logger = setup_logger("node_extractor")
 
 class NodeExtractor:
-    def __init__(self, llm_client, model_name: str, embedding_model: str, encoder: Optional[TransformerEncoder] = None, device: str = "cpu", time_logger: Optional[TimeLogger] = None):
+    def __init__(self, llm_client, model_name: str, embedding_model: str, encoder: Optional[TransformerEncoder] = None, device: str = "cpu", time_logger: Optional[TimeLogger] = None, embed_batch_size: int = 64):
         self.llm_client = llm_client
         self.model_name = model_name
         self.embedding_model = embedding_model
@@ -23,6 +23,7 @@ class NodeExtractor:
         self.hierarchy_tree = build_hierarchy_tree(CLUSTER_DEFINITIONS)
         self.time_logger = time_logger
         self.combined_schema = self.build_combined_schema()
+        self.embed_batch_size = embed_batch_size
     
 
     def extract_context(self, text: str, mention: str, window_size: int = 50) -> Tuple[str, str]:
@@ -284,7 +285,7 @@ class NodeExtractor:
                 
                 # Generate embeddings for entity names
                 try:
-                    name_embeddings = self.encoder.embed_to_numpy(names).tolist()
+                    name_embeddings = self.encoder.embed_to_numpy(names, batch_size=self.embed_batch_size).tolist()
                 except Exception:
                     name_embeddings = []
         else:
@@ -342,7 +343,7 @@ class NodeExtractor:
             if not names:
                 return []
             try:
-                name_embeddings = self.encoder.embed_to_numpy(names).tolist()
+                name_embeddings = self.encoder.embed_to_numpy(names, batch_size=self.embed_batch_size).tolist()
             except Exception:
                 name_embeddings = []
         
