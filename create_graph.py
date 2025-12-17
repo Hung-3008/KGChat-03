@@ -18,17 +18,12 @@ from backend.utils.time_logger import TimeLogger, setup_logger, Timer
 logger = setup_logger("create_graph", log_file=Path("output/create_graph.log"))
 
 _EXTRACTOR: Optional[GraphExtractor] = None
-_EXTRACTOR_CONFIG: Optional[str] = None
 
-
-def _get_extractor(config_path: str, time_logger: TimeLogger) -> GraphExtractor:
-    """Reuse a single GraphExtractor per process and swap time_logger cheaply."""
-    global _EXTRACTOR, _EXTRACTOR_CONFIG
-    if _EXTRACTOR is None or _EXTRACTOR_CONFIG != config_path:
-        _EXTRACTOR = GraphExtractor(config_path=config_path, time_logger=time_logger)
-        _EXTRACTOR_CONFIG = config_path
-    else:
-        _EXTRACTOR.set_time_logger(time_logger)
+def _get_extractor(config_path: str) -> GraphExtractor:
+    """Get the singleton GraphExtractor instance."""
+    global _EXTRACTOR
+    if _EXTRACTOR is None:
+        _EXTRACTOR = GraphExtractor(config_path=config_path)
     return _EXTRACTOR
 
 
@@ -73,12 +68,12 @@ def process_single_file(args):
         time_logger = TimeLogger(output_dir / "time_log.csv", write_to_file=False)
         time_logger.start_file(file_path.name)
 
-        extractor = _get_extractor(config_path=config_path, time_logger=time_logger)
-
+        extractor = _get_extractor(config_path=config_path)
+        
         logger.info(f"Processing: {file_path.name}")
 
         start_time = time.time()
-        nodes, edges = extractor.extract_from_file(str(file_path))
+        nodes, edges = extractor.extract_from_file(str(file_path), time_logger=time_logger)
         total_duration = time.time() - start_time
 
         temp_dir = output_dir / "tmp_results"
@@ -122,7 +117,7 @@ def process_single_file(args):
 
 def main():
     import argparse
-    from concurrent.futures import ProcessPoolExecutor, as_completed
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     import threading
     
     parser = argparse.ArgumentParser()
@@ -254,9 +249,8 @@ def main():
                     logger.error(f"Failed to kill process group: {e}")
                 return
         else:
-            # Use ProcessPoolExecutor for true parallelism
-            # Note: Using processes instead of threads to avoid GIL and share GPU properly
-            with ProcessPoolExecutor(max_workers=max_parallel_files) as executor:
+            # Use ThreadPoolExecutor for thread-based parallelism (shares memory/VRAM)
+            with ThreadPoolExecutor(max_workers=max_parallel_files) as executor:
                 future_to_file = {
                     executor.submit(process_single_file, (file_path, config_path, output_dir)): file_path 
                     for file_path in files_to_process

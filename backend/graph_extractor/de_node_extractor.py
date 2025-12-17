@@ -15,13 +15,13 @@ from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 logger = setup_logger("node_extractor")
 
 class NodeExtractor:
-    def __init__(self, llm_client, model_name: str, embedding_model: str, encoder: Optional[TransformerEncoder] = None, device: str = "cpu", time_logger: Optional[TimeLogger] = None, embed_batch_size: int = 64):
+    def __init__(self, llm_client, model_name: str, embedding_model: str, encoder: Optional[TransformerEncoder] = None, device: str = "cpu", embed_batch_size: int = 64):
         self.llm_client = llm_client
         self.model_name = model_name
         self.embedding_model = embedding_model
         self.encoder = encoder or TransformerEncoder(model_name=embedding_model, device=device)
         self.hierarchy_tree = build_hierarchy_tree(CLUSTER_DEFINITIONS)
-        self.time_logger = time_logger
+        # self.time_logger removed from init to encourage stateless passing
         self.combined_schema = self.build_combined_schema()
         self.embed_batch_size = embed_batch_size
     
@@ -192,7 +192,7 @@ class NodeExtractor:
             logger.error(f"Error in llm_filter_entities: {e}")
             return {}
 
-    def extract (self, text: str, file_name: str = "unknown") -> List[Dict]:
+    def extract (self, text: str, file_name: str = "unknown", time_logger: Optional[TimeLogger] = None) -> List[Dict]:
         """
         Stage 1: Extract raw medical entities from text using LLM, do per-cluster
         Stage 2: Hierarchically filter 
@@ -201,8 +201,8 @@ class NodeExtractor:
         """
 
         # Stage 1: Extract raw entities in a single structured call
-        if self.time_logger:
-            with Timer(self.time_logger, file_name, "node_stage1"):
+        if time_logger:
+            with Timer(time_logger, file_name, "node_stage1"):
                 all_entities = self.extract_all_entities(text)
         else:
             all_entities = self.extract_all_entities(text)
@@ -210,8 +210,8 @@ class NodeExtractor:
         #logger.info(f"Extracted Entities: {all_entities}")
 
         # Stage 2: Hierarchical filtering - filter entities by UMLS hierarchy depth
-        if self.time_logger:
-            with Timer(self.time_logger, file_name, "node_stage2"):
+        if time_logger:
+            with Timer(time_logger, file_name, "node_stage2"):
                 filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
         else:
             filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
@@ -219,8 +219,8 @@ class NodeExtractor:
         #logger.info(f"Filtered Entities: {filtered_entities}")
         
         # Stage 3: LLM filtering
-        if self.time_logger:
-            with Timer(self.time_logger, file_name, "node_stage3"):
+        if time_logger:
+            with Timer(time_logger, file_name, "node_stage3"):
                 llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
         else:
             llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
@@ -228,8 +228,8 @@ class NodeExtractor:
         #logger.info(f"LLM Filtered Entities: {llm_filtered_entities}")
        
         # Stage 4: Embedding
-        if self.time_logger:
-            with Timer(self.time_logger, file_name, "node_stage4"):
+        if time_logger:
+            with Timer(time_logger, file_name, "node_stage4"):
                 entities_list = []
                 if isinstance(llm_filtered_entities, dict):
                     if "entities" in llm_filtered_entities:

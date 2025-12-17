@@ -20,13 +20,13 @@ from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 logger = setup_logger("graph_extractor")
 
 class GraphExtractor:
-    def __init__(self, config_path: str = "backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None):
+    def __init__(self, config_path: str = "backend/configs/configs.yml"):
         self.config_path = Path(config_path)
         if not self.config_path.is_absolute():
             self.config_path = Path(project_root) / config_path
             
         self.configs = self._load_config()
-        self.time_logger = time_logger
+        # self.time_logger removed
         
         # Initialize LLM Client
         self.llm_config = self.configs.get("LLM", {})
@@ -46,7 +46,7 @@ class GraphExtractor:
             model_name=self.llm_config.get("model", "gpt-like-model"),
             embedding_model=embedding_model,
             device=device,
-            time_logger=self.time_logger,
+            # time_logger=self.time_logger, # Removed
             embed_batch_size=embed_batch_size
         )
         
@@ -58,18 +58,13 @@ class GraphExtractor:
         self.edge_extractor = EdgeExtractor(
             llm_client=self.llm_client,
             model_name=self.llm_config.get("model", "gpt-like-model"),
-            time_logger=self.time_logger,
+            # time_logger=self.time_logger, # Removed
             search_batch_size=search_batch_size,
             linker_batch_size=linker_batch_size
         )
 
-    def set_time_logger(self, time_logger: Optional[TimeLogger]):
-        """Update time logger for the extractor and its components without rebuilding heavy models."""
-        self.time_logger = time_logger
-        if hasattr(self.node_extractor, "time_logger"):
-            self.node_extractor.time_logger = time_logger
-        if hasattr(self.edge_extractor, "time_logger"):
-            self.edge_extractor.time_logger = time_logger
+    # set_time_logger removed as it's no longer needed
+
 
     def _load_config(self) -> dict:
         if not self.config_path.exists():
@@ -78,7 +73,7 @@ class GraphExtractor:
         with self.config_path.open("r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
 
-    def extract_from_file(self, input_path: str) -> tuple[List[Dict], List[Dict]]:
+    def extract_from_file(self, input_path: str, time_logger: Optional[TimeLogger] = None) -> tuple[List[Dict], List[Dict]]:
         input_file = Path(input_path)
         if not input_file.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
@@ -86,9 +81,8 @@ class GraphExtractor:
         # logger.info(f"Processing file: {input_path}")
         
         # Step 1: Chunking
-        # Step 1: Chunking
-        if self.time_logger:
-            with Timer(self.time_logger, input_file.name, "chunking"):
+        if time_logger:
+            with Timer(time_logger, input_file.name, "chunking"):
                 chunks = self.chunker.chunk(input_file)
         else:
             chunks = self.chunker.chunk(input_file)
@@ -96,7 +90,6 @@ class GraphExtractor:
         all_nodes = []
         all_edges = []
         
-        # Step 2 & 3: Node and Edge Extraction per chunk
         # Step 2 & 3: Node and Edge Extraction per chunk
         from concurrent.futures import ThreadPoolExecutor, as_completed
         
@@ -109,11 +102,11 @@ class GraphExtractor:
             
             try:
                 # Node Extraction
-                if self.time_logger:
-                    with Timer(self.time_logger, input_file.name, "node_total"):
-                        nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
+                if time_logger:
+                    with Timer(time_logger, input_file.name, "node_total"):
+                        nodes = self.node_extractor.extract(chunk, file_name=input_file.name, time_logger=time_logger)
                 else:
-                    nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
+                    nodes = self.node_extractor.extract(chunk, file_name=input_file.name, time_logger=time_logger)
                     
                 for node in nodes:
                     node['chunk_id'] = i
@@ -122,13 +115,13 @@ class GraphExtractor:
                 chunk_nodes.extend(nodes)
                 
                 # Edge Extraction
-                if self.time_logger:
-                    with Timer(self.time_logger, input_file.name, "edge_total"):
+                if time_logger:
+                    with Timer(time_logger, input_file.name, "edge_total"):
                         logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
-                        edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+                        edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name, time_logger=time_logger)
                 else:
                     logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
-                    edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+                    edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name, time_logger=time_logger)
                 
                 # Process Level 2 Nodes
                 for l2_node in level2_nodes:
