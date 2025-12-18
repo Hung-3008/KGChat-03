@@ -20,7 +20,7 @@ from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 logger = setup_logger("graph_extractor")
 
 class GraphExtractor:
-    def __init__(self, config_path: str = "backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None):
+    def __init__(self, config_path: str = "backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None, encoder=None, llm_base_url: Optional[str] = None):
         self.config_path = Path(config_path)
         if not self.config_path.is_absolute():
             self.config_path = Path(project_root) / config_path
@@ -30,6 +30,10 @@ class GraphExtractor:
         
         # Initialize LLM Client
         self.llm_config = self.configs.get("LLM", {})
+        if llm_base_url:
+            self.llm_config['base_url'] = llm_base_url
+            logger.info(f"Overriding LLM Base URL: {llm_base_url}")
+            
         self.llm_client = LLMFactory.create_client(self.llm_config)
         
         # Initialize Components
@@ -40,10 +44,18 @@ class GraphExtractor:
         embedding_model = encoder_config.get("model_name", "intfloat/multilingual-e5-base")
         device = encoder_config.get("device", "cpu")
         
+        # Use provided encoder or create new one
+        if encoder:
+            self.encoder = encoder
+        else:
+            from backend.encoders.transformer_encoder import TransformerEncoder
+            self.encoder = TransformerEncoder(model_name=embedding_model, device=device)
+        
         self.node_extractor = NodeExtractor(
             llm_client=self.llm_client,
             model_name=self.llm_config.get("model", "gpt-like-model"),
             embedding_model=embedding_model,
+            encoder=self.encoder, # Pass encoder explicitly
             device=device,
             time_logger=self.time_logger
         )
