@@ -80,7 +80,7 @@ class EdgeExtractor:
         
         if self.entity_linker:
             if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: Krissbert Linking"):
+                with Timer(self.time_logger, file_name, "Edge_Krissbert_Linking"):
                     level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
             else:
                 level2_nodes, ref_to_edges = self._process_krissbert_level2(entities_list)
@@ -109,7 +109,7 @@ class EdgeExtractor:
                      return ExtractedEdges(edges=[])
 
             if self.time_logger:
-                with Timer(self.time_logger, file_name, "Edge: LLM Generation"):
+                with Timer(self.time_logger, file_name, "Edge_LLM_Generation"):
                     llm_edges_result = _generate_structured()
             else:
                 llm_edges_result = _generate_structured()

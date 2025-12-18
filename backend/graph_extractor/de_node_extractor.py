@@ -162,24 +162,44 @@ class NodeExtractor:
 
     def extract (self, text: str, file_name: str = "unknown") -> List[Dict]:
         """
-        Stage 1: Extract raw medical entities from text using LLM, do per-cluster
+        Stage 1: Extract raw medical entities from text using LLM, do per-cluster (PARALLEL)
         Stage 2: Hierarchically filter 
         Stage 3: LLM filter
         Stage 4: Embed entities
         """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        # Stage 1: Extract raw entities
+        # Stage 1: Extract raw entities IN PARALLEL (4x speedup)
+        def _extract_parallel():
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {
+                    executor.submit(self.extract_entities, text, ACTIVITY_PROMPT, Activity): 'activity',
+                    executor.submit(self.extract_entities, text, PHENOMENON_PROMPT, Phenomenon): 'phenomenon',
+                    executor.submit(self.extract_entities, text, PHYSICAL_OBJECT_PROMPT, PhysicalObject): 'physical_object',
+                    executor.submit(self.extract_entities, text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity): 'conceptual_entity',
+                }
+                
+                results = {}
+                for future in as_completed(futures):
+                    cluster_name = futures[future]
+                    try:
+                        results[cluster_name] = future.result()
+                    except Exception as e:
+                        logger.error(f"Error extracting {cluster_name}: {e}")
+                        results[cluster_name] = {}
+                
+                return results
+        
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 1: Raw Extraction"):
-                activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
-                phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
-                physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
-                conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
+            with Timer(self.time_logger, file_name, "Node_Stage1_Raw_Extraction"):
+                parallel_results = _extract_parallel()
         else:
-            activity_entities = self.extract_entities(text, ACTIVITY_PROMPT, Activity)
-            phenomenon_entities = self.extract_entities(text, PHENOMENON_PROMPT, Phenomenon)
-            physical_object_entities = self.extract_entities(text, PHYSICAL_OBJECT_PROMPT, PhysicalObject)
-            conceptual_entity_entities = self.extract_entities(text, CONCEPTUAL_ENTITY_PROMPT, ConceptualEntity)
+            parallel_results = _extract_parallel()
+        
+        activity_entities = parallel_results.get('activity', {})
+        phenomenon_entities = parallel_results.get('phenomenon', {})
+        physical_object_entities = parallel_results.get('physical_object', {})
+        conceptual_entity_entities = parallel_results.get('conceptual_entity', {})
 
 
         all_entities = {
@@ -193,7 +213,7 @@ class NodeExtractor:
 
         # Stage 2: Hierarchical filtering - filter entities by UMLS hierarchy depth
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 2: Hierarchy Filter"):
+            with Timer(self.time_logger, file_name, "Node_Stage2_Hierarchy_Filter"):
                 filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
         else:
             filtered_entities = filter_entities_by_hierarchy(all_entities, self.hierarchy_tree)
@@ -202,7 +222,7 @@ class NodeExtractor:
         
         # Stage 3: LLM filtering
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 3: LLM Filter"):
+            with Timer(self.time_logger, file_name, "Node_Stage3_LLM_Filter"):
                 llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
         else:
             llm_filtered_entities = self.llm_filter_entities(text, filtered_entities)
@@ -211,7 +231,7 @@ class NodeExtractor:
        
         # Stage 4: Embedding
         if self.time_logger:
-            with Timer(self.time_logger, file_name, "Node Stage 4: Embedding"):
+            with Timer(self.time_logger, file_name, "Node_Stage4_Embedding"):
                 entities_list = []
                 if isinstance(llm_filtered_entities, dict):
                     if "entities" in llm_filtered_entities:

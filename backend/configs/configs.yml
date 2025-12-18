@@ -1,6 +1,6 @@
 LLM:
   client: ollama
-  model: llama3.1:8b
+  model: llama3.2:3b
   temperature: 0.85
   top_p: 1.0
   seed: 42
@@ -15,15 +15,16 @@ Encoder:
   device: cuda
 
 Create:
-  Batch_size: 1
-  Limit: 1
-  Resume: False
-  max_parallel_chunks: 3
+  Batch_size: 10
+  Limit: 5
+  Resume: True
+  max_parallel_chunks: 4
+  max_parallel_files: 5
 
 Insert:
   Batch_size: 1
   Limit: 100000
-  Resume: False
+  Resume: True
 
 Qdrant:
   timeout: 300 

@@ -95,12 +95,8 @@ class GraphExtractor:
             chunk_edges = []
             
             try:
-                # Node Extraction
-                if self.time_logger:
-                    with Timer(self.time_logger, input_file.name, f"Node Extraction (Chunk {i})"):
-                        nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
-                else:
-                    nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
+                # Node Extraction (no timer - logged at stage level)
+                nodes = self.node_extractor.extract(chunk, file_name=input_file.name)
                     
                 for node in nodes:
                     node['chunk_id'] = i
@@ -108,14 +104,9 @@ class GraphExtractor:
                     node['level'] = "Level 1" # Mark as Level 1
                 chunk_nodes.extend(nodes)
                 
-                # Edge Extraction
-                if self.time_logger:
-                    with Timer(self.time_logger, input_file.name, f"Edge Extraction (Chunk {i})"):
-                        logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
-                        edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
-                else:
-                    logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
-                    edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
+                # Edge Extraction (no timer - logged at stage level)
+                logger.info(f"Extracting edges for Chunk {i} with {len(nodes)} nodes")
+                edges_result, level2_nodes = self.edge_extractor.extract(text=chunk, nodes=nodes, file_name=input_file.name)
                 
                 # Process Level 2 Nodes
                 for l2_node in level2_nodes:
@@ -137,19 +128,33 @@ class GraphExtractor:
                 logger.error(f"Error extracting chunk {i}: {e}\n{traceback.format_exc()}")
                 return [], []
 
-        # Execute chunks in parallel
+        # Execute chunks in parallel with stage-level timing
         # Note: If memory usage is high, reduce chunk_parallelism in config
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_idx = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
-            
-            for future in as_completed(future_to_idx):
-                i = future_to_idx[future]
-                try:
-                    c_nodes, c_edges = future.result()
-                    all_nodes.extend(c_nodes)
-                    all_edges.extend(c_edges)
-                except Exception as e:
-                    logger.error(f"Failed to process chunk {i}: {e}")
+        if self.time_logger:
+            with Timer(self.time_logger, input_file.name, "All_Chunks_Processing"):
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    future_to_idx = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
+                    
+                    for future in as_completed(future_to_idx):
+                        i = future_to_idx[future]
+                        try:
+                            c_nodes, c_edges = future.result()
+                            all_nodes.extend(c_nodes)
+                            all_edges.extend(c_edges)
+                        except Exception as e:
+                            logger.error(f"Failed to process chunk {i}: {e}")
+        else:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_idx = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
+                
+                for future in as_completed(future_to_idx):
+                    i = future_to_idx[future]
+                    try:
+                        c_nodes, c_edges = future.result()
+                        all_nodes.extend(c_nodes)
+                        all_edges.extend(c_edges)
+                    except Exception as e:
+                        logger.error(f"Failed to process chunk {i}: {e}")
         
         return all_nodes, all_edges
 
