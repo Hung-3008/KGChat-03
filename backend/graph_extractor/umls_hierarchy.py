@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple
 
 CLUSTER_DEFINITIONS: Dict[Optional[str], List[Tuple[str, str, Optional[str]]]] = {
     "activity": [
-        # Reduced from 15 to 9 types - removed non-medical activities
         ("T052", "Activity", None),
         ("T053", "Behavior", "T052"),
         ("T058", "Health_Care_Activity", "T052"),
@@ -14,50 +13,30 @@ CLUSTER_DEFINITIONS: Dict[Optional[str], List[Tuple[str, str, Optional[str]]]] =
         ("T060", "Diagnostic_Procedure", "T058"),
         ("T061", "Therapeutic_or_Preventive_Procedure", "T058"),
         ("T062", "Research_Activity", "T052"),
-        ("T063", "Molecular_Biology_Research_Technique", "T062"),
-        ("T064", "Governmental_or_Regulatory_Activity", "T052"),
     ],
     "phenomenon": [
-        # Reduced from 19 to 11 types - kept core disease/pathology types
         ("T047", "Disease_or_Syndrome", None),
         ("T191", "Neoplastic_Process", None),
         ("T037", "Injury_or_Poisoning", None),
         ("T046", "Pathologic_Function", None),
-        ("T048", "Mental_or_Behavioral_Dysfunction", "T046"),
         ("T184", "Sign_or_Symptom", None),
-        ("T039", "Physiologic_Function", None),
-        ("T042", "Organ_or_Tissue_Function", None),
-        ("T049", "Cell_or_Molecular_Dysfunction", None),
-        ("T038", "Biologic_Function", None),
-        ("T041", "Mental_Process", None),
     ],
     "physical_object": [
-        # Reduced from 55 to 16 types - removed organism taxonomy, kept medical entities
         ("T023", "Body_Part_Organ_or_Organ_Component", None),
         ("T024", "Tissue", None),
         ("T025", "Cell", None),
         ("T028", "Gene_or_Genome", None),
         ("T190", "Anatomical_Abnormality", None),
-        ("T019", "Congenital_Abnormality", "T190"),
-        ("T020", "Acquired_Abnormality", "T190"),
         ("T200", "Clinical_Drug", None),
         ("T121", "Pharmacologic_Substance", None),
-        ("T195", "Antibiotic", "T121"),
-        ("T125", "Hormone", None),
-        ("T126", "Enzyme", None),
-        ("T127", "Vitamin", None),
         ("T074", "Medical_Device", None),
         ("T031", "Body_Substance", None),
-        ("T001", "Organism", None),  # Only for disease-causing organisms
+        ("T001", "Organism", None),
     ],
     "conceptual_entity": [
-        # Reduced from 38 to 8 types - removed organizations, groups, occupations
         ("T033", "Finding", None),
-        ("T184", "Sign_or_Symptom", None),
         ("T034", "Laboratory_or_Test_Result", "T033"),
-        ("T201", "Clinical_Attribute", None),
-        ("T029", "Body_Location_or_Region", None),
-        ("T022", "Body_System", None),
+        ("T029", "Anatomical_Concept", None), # Merged Location/System
         ("T081", "Quantitative_Concept", None),
         ("T079", "Temporal_Concept", None),
     ],

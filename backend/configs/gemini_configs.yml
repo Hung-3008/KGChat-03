@@ -1,14 +1,13 @@
 LLM:
-  client: ollama
-  model: llama3.2:3b
-  temperature: 0.85
-  top_p: 1.0
-  seed: 42
-
-Gemini:
+  client: gemini
+  mode: vertex  
+  project: kgchat-481715  
+  location: us-central1  
   model: gemini-2.5-flash
   temperature: 0.85
   top_p: 0.9
+  rpm: 100  
+  
 
 Encoder:
   model_name: dmis-lab/biobert-v1.1
@@ -19,7 +18,7 @@ Create:
   Limit: null
   Resume: True
   max_parallel_chunks: 4
-  max_parallel_files: 3
+  max_parallel_files: 8
 
 Insert:
   Batch_size: 1
@@ -29,4 +28,3 @@ Insert:
 Qdrant:
   timeout: 300 
   search_batch_size: 10 
-

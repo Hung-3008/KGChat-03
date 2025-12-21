@@ -20,7 +20,7 @@ from backend.utils.time_logger import TimeLogger, Timer, setup_logger
 logger = setup_logger("graph_extractor")
 
 class GraphExtractor:
-    def __init__(self, config_path: str = "backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None, encoder=None, llm_base_url: Optional[str] = None):
+    def __init__(self, config_path: str = "backend/configs/configs.yml", time_logger: Optional[TimeLogger] = None, encoder=None, llm_base_url: Optional[str] = None, llm_api_key: Optional[str] = None):
         self.config_path = Path(config_path)
         if not self.config_path.is_absolute():
             self.config_path = Path(project_root) / config_path
@@ -33,6 +33,9 @@ class GraphExtractor:
         if llm_base_url:
             self.llm_config['base_url'] = llm_base_url
             logger.info(f"Overriding LLM Base URL: {llm_base_url}")
+            
+        if llm_api_key:
+            self.llm_config['api_key'] = llm_api_key
             
         self.llm_client = LLMFactory.create_client(self.llm_config)
         

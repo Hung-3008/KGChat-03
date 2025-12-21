@@ -14,100 +14,79 @@ Text:
 """
 
 
-ACTIVITY_PROMPT = '''Extract medical procedures and healthcare activities from clinical text.
+ACTIVITY_PROMPT = '''Extract medical procedures and healthcare activities.
 
 Semantic types:
-- Health_Care_Activity: Healthcare-related activities
-- Laboratory_Procedure: Lab tests, blood work, analysis
-- Diagnostic_Procedure: Imaging, examinations, diagnostic tests
-- Therapeutic_or_Preventive_Procedure: Surgeries, treatments, therapies, preventive care
-- Research_Activity: Clinical trials, research protocols
-- Molecular_Biology_Research_Technique: Molecular/genetic research methods
-- Governmental_or_Regulatory_Activity: Regulatory approvals, compliance activities
-- Behavior: Clinically significant behaviors only
-- Activity: Other medically relevant activities
+- Health_Care_Activity: General healthcare activities
+- Laboratory_Procedure: Lab tests, analysis
+- Diagnostic_Procedure: Imaging, exams, tests
+- Therapeutic_or_Preventive_Procedure: Surgeries, treatments, prevention
+- Research_Activity: Clinical trials, protocols, molecular techniques
+- Behavior: Clinically significant behaviors
 
 Rules:
-1. Extract EXACT phrases from text
-2. Choose MOST SPECIFIC type
-3. ONLY extract clinical procedures and medically significant activities
-4. IGNORE: daily activities, general behaviors, connector verbs ("showed", "revealed")
+1. Extract EXACT phrases.
+2. Choose MOST SPECIFIC type.
+3. IGNORE: daily activities, general behaviors, connector verbs.
 
 Text:
 [INPUT TEXT]
 '''
 
-PHENOMENON_PROMPT = '''Extract diseases, symptoms, and pathological processes from clinical text.
+PHENOMENON_PROMPT = '''Extract diseases, symptoms, and pathologies.
 
 Semantic types:
-- Disease_or_Syndrome: Diseases, disorders, syndromes
-- Neoplastic_Process: Cancers, tumors, neoplasms
-- Injury_or_Poisoning: Injuries, trauma, poisoning events
-- Pathologic_Function: Abnormal biological functions
-- Mental_or_Behavioral_Dysfunction: Mental health disorders, behavioral issues
+- Disease_or_Syndrome: Diseases, disorders, syndromes, mental/behavioral dysfunctions
+- Neoplastic_Process: Cancers, tumors
+- Injury_or_Poisoning: Injuries, trauma, poisoning
+- Pathologic_Function: Abnormal biological/cellular/molecular functions
 - Sign_or_Symptom: Observable signs, reported symptoms
-- Physiologic_Function: Normal physiological processes when relevant
-- Organ_or_Tissue_Function: Organ/tissue-specific functions
-- Cell_or_Molecular_Dysfunction: Cellular/molecular abnormalities
-- Biologic_Function: General biological functions when clinically relevant
-- Mental_Process: Cognitive processes when medically significant
 
 Rules:
-1. Extract EXACT phrases from text
-2. Choose MOST SPECIFIC type (e.g., Neoplastic_Process over Disease_or_Syndrome)
-3. PRIORITIZE: diseases, syndromes, neoplasms, injuries, pathologies
-4. IGNORE: general biological processes unless abnormal or part of disease mechanism
+1. Extract EXACT phrases.
+2. Choose MOST SPECIFIC type.
+3. IGNORE: normal biological processes unless part of disease mechanism.
 
 Text:
 [INPUT TEXT]
 '''
 
-PHYSICAL_OBJECT_PROMPT = '''Extract anatomical structures, drugs, and substances from clinical text.
+PHYSICAL_OBJECT_PROMPT = '''Extract anatomical structures and substances.
 
 Semantic types:
-- Body_Part_Organ_or_Organ_Component: Organs, body parts, organ components
+- Body_Part_Organ_or_Organ_Component: Organs, body parts
 - Tissue: Tissues
 - Cell: Cells
 - Gene_or_Genome: Genes, genetic material
-- Anatomical_Abnormality: Anatomical abnormalities
-- Congenital_Abnormality: Birth defects, congenital conditions
-- Acquired_Abnormality: Acquired anatomical abnormalities
+- Anatomical_Abnormality: Congenital or acquired abnormalities
 - Clinical_Drug: Medications, drugs
-- Pharmacologic_Substance: Pharmaceutical substances
-- Antibiotic: Antibiotics
-- Hormone: Hormones
-- Enzyme: Enzymes
-- Vitamin: Vitamins
-- Medical_Device: Medical devices, implants, equipment
-- Body_Substance: Blood, urine, bodily fluids
-- Organism: Pathogens, bacteria, viruses relevant to disease
+- Pharmacologic_Substance: Substances, antibiotics, hormones, enzymes, vitamins
+- Medical_Device: Devices, implants
+- Body_Substance: Fluids, excretions
+- Organism: Pathogens, viruses, bacteria
 
 Rules:
-1. Extract EXACT phrases from text
-2. FOCUS on: organs, tissues, drugs, medical devices, genes
-3. IGNORE: general physical objects, food, common chemicals
-4. For organisms: ONLY extract if disease-causing (e.g., "E. coli", "HIV")
+1. Extract EXACT phrases.
+2. FOCUS on: anatomies, drugs, devices.
+3. IGNORE: food, common chemicals.
+4. Organism: ONLY if disease-causing.
 
 Text:
 [INPUT TEXT]'''
 
-CONCEPTUAL_ENTITY_PROMPT = '''Extract clinical findings, symptoms, and test results from clinical text.
+CONCEPTUAL_ENTITY_PROMPT = '''Extract clinical findings and measurements.
 
 Semantic types:
-- Finding: Clinical findings, observations
-- Sign_or_Symptom: Signs and symptoms
+- Finding: Clinical findings, attributes, observations
 - Laboratory_or_Test_Result: Lab results, test outcomes
-- Clinical_Attribute: Clinical characteristics, attributes
-- Body_Location_or_Region: Anatomical locations, body regions
-- Body_System: Body systems (cardiovascular, respiratory, etc.)
-- Quantitative_Concept: Numerical measurements, scores, values
-- Temporal_Concept: Time-related clinical information (disease progression, treatment duration)
+- Anatomical_Concept: Body locations, regions, systems
+- Quantitative_Concept: Measurements, scores
+- Temporal_Concept: Time-related info
 
 Rules:
-1. Extract EXACT phrases from text
-2. STRICT: Only extract if clinically relevant
-3. FOCUS on: findings, symptoms, test results, body locations
-4. IGNORE: generic terms ("results", "study", "data", "analysis"), organizations, occupations
+1. Extract EXACT phrases.
+2. STRICT: Only extract if clinically relevant.
+3. IGNORE: generic terms ("results", "study"), occupations.
 
 Text:
 [INPUT TEXT]'''

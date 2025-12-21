@@ -35,16 +35,18 @@ def process_single_file(file_path: Path, extractor_queue: queue.Queue, time_logg
     try:
         # Get an available extractor (blocks until one is free)
         extractor = extractor_queue.get()
-        port = extractor.llm_config.get('base_url', '11434').split(':')[-1]
-        logger.info(f"Processing file: {file_path.name} on port {port}")
+        # port = extractor.llm_config.get('base_url', '11434').split(':')[-1]
+        # logger.info(f"Processing file: {file_path.name} on port {port}")
+        worker_id = getattr(extractor, 'worker_id', 'unknown')
+        logger.info(f"Processing file: {file_path.name} with Worker {worker_id}")
         
         # Create output directory for this file
         file_stem = file_path.stem
         file_output_dir = output_dir / "graph" / file_stem
         file_output_dir.mkdir(parents=True, exist_ok=True)
         
-        nodes_path = file_output_dir / "nodes.csv"
-        edges_path = file_output_dir / "edges.csv"
+        nodes_path = file_output_dir / "node.csv"
+        edges_path = file_output_dir / "edge.csv"
         
         with Timer(time_logger, file_path.name, "Total File Processing"):
             nodes, edges = extractor.extract_from_file(str(file_path))
@@ -57,7 +59,7 @@ def process_single_file(file_path: Path, extractor_queue: queue.Queue, time_logg
             
         time_logger.finalize_file(file_path.name)
         
-        logger.info(f"✓ Completed {file_path.name} on port {port}: {len(nodes)} nodes, {len(edges)} edges")
+        logger.info(f"✓ Completed {file_path.name} with Worker {worker_id}: {len(nodes)} nodes, {len(edges)} edges")
         return file_path.name, True
         
     except Exception as e:
@@ -72,7 +74,7 @@ def process_single_file(file_path: Path, extractor_queue: queue.Queue, time_logg
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="backend/configs/configs.yml", help="Path to config file")
+    parser.add_argument("--config", default="backend/configs/gemini_configs.yml", help="Path to config file")
     args = parser.parse_args()
     
     config_path = args.config
@@ -84,6 +86,10 @@ def main():
     # Use max_parallel_files from config, which determines how many threads run
     # Should ideally be >= number of ports to utilize all ports
     max_parallel_files = create_config.get("max_parallel_files", 5) 
+    
+    # We can also check if the loaded config actually specifies gemini
+    if configs.get("LLM", {}).get("client") != "gemini":
+        logger.warning(f"Config at {config_path} does not specify 'client: gemini'. This script is intended for Gemini.") 
     
     data_dir = Path("data/PMC_Part1")
     if not data_dir.exists():
@@ -111,20 +117,22 @@ def main():
     shared_encoder = TransformerEncoder(model_name=embedding_model, device=device)
     
     # 2. Initialize GraphExtractors Pool
-    # Ports mapping to docker instances
-    OLLAMA_PORTS = [11434, 11435, 11436]
     extractor_queue = queue.Queue()
     
-    logger.info(f"Initializing {len(OLLAMA_PORTS)} GraphExtractors for ports {OLLAMA_PORTS}...")
-    for port in OLLAMA_PORTS:
-        base_url = f"http://localhost:{port}"
+    # Create valid number of extractors (match max_parallel_files)
+    # This ensures we don't hold keys idle in extractors that aren't running
+    num_extractors = max_parallel_files 
+    
+    logger.info(f"Initializing {num_extractors} GraphExtractors...")
+    for i in range(num_extractors):
         # Create extractor sharing the encoder
         ex = GraphExtractor(
             config_path=config_path, 
             time_logger=time_logger,
-            encoder=shared_encoder, 
-            llm_base_url=base_url
+            encoder=shared_encoder
         )
+        
+        ex.worker_id = i + 1 
         extractor_queue.put(ex)
         
     log_path = output_dir / "processed_files.txt"
@@ -148,8 +156,8 @@ def main():
     if not files_to_process:
         return
 
-    # Process in Parallel
-    logger.info(f"Starting parallel processing with {max_parallel_files} threads and {len(OLLAMA_PORTS)} LLM backends")
+    # Process in Parallel using ThreadPoolExecutor
+    logger.info(f"Starting parallel processing with {max_parallel_files} threads using Vertex AI")
     
     completed_count = 0
     

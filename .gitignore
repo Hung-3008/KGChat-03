@@ -93,6 +93,7 @@ scripts/*
 !scripts/debug_node_extractor.py
 !scripts/test_schema_fix.py
 !scripts/test_generate_prototypes.py
+!scripts/test_gemini_keys.py
 *.ipynb
 commands.ipynb
 .github/*

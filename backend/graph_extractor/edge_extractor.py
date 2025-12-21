@@ -101,6 +101,9 @@ class EdgeExtractor:
             def _generate_structured():
                  resp = self.llm_client.generate(prompt=prompt, format=ExtractedEdges)
                  if isinstance(resp, dict):
+                     if "error" in resp:
+                         logger.error(f"LLM extraction failed: {resp['error']}")
+                         return ExtractedEdges(edges=[])
                      return ExtractedEdges(**resp)
                  elif isinstance(resp, ExtractedEdges):
                      return resp
