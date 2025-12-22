@@ -1,14 +1,9 @@
-#!/bin/bash
-# Start additional Ollama instances on ports 11435 and 11436
-# Port 11434 is assumed to be running via system service
+# Start additional Ollama instances on ports 11435-11438
+# Port 11434 is assumed to be running via system service, but we check it too.
 
-# Check if 11434 is up
-if ! curl -s http://localhost:11434/api/tags >/dev/null; then
-    echo "Starting default Ollama on 11434..."
-    OLLAMA_HOST=127.0.0.1:11434 ollama serve > ollama_11434.log 2>&1 &
-else
-    echo "Ollama on 11434 is already running."
-fi
+# Configuration
+export OLLAMA_NUM_PARALLEL=4
+export OLLAMA_MAX_LOADED_MODELS=1 # Ensure we don't load too many models per instance if VRAM is tight
 
 # Function to start if not running
 start_ollama() {
@@ -21,15 +16,19 @@ start_ollama() {
     fi
 }
 
+# Start instances
+start_ollama 11434
 start_ollama 11435
 start_ollama 11436
+start_ollama 11437
+start_ollama 11438
 
 echo "Waiting for services to start..."
 sleep 5
 
 # Verify
 echo "Verifying ports:"
-for port in 11434 11435 11436; do
+for port in 11434 11435 11436 11437 11438; do
     if curl -s http://localhost:$port/api/tags >/dev/null; then
         echo "Port $port: UP"
     else

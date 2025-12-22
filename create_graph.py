@@ -112,7 +112,8 @@ def main():
     
     # 2. Initialize GraphExtractors Pool
     # Ports mapping to docker instances
-    OLLAMA_PORTS = [11434, 11435, 11436]
+    ollama_config = configs.get("Ollama", {})
+    OLLAMA_PORTS = ollama_config.get("ports", [11434, 11435, 11436, 11437, 11438])
     extractor_queue = queue.Queue()
     
     logger.info(f"Initializing {len(OLLAMA_PORTS)} GraphExtractors for ports {OLLAMA_PORTS}...")
