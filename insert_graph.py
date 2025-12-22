@@ -44,7 +44,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--config", default="backend/configs/configs.yml", help="Path to config file")
+        "--config", default="/home/nguyenthang/Tài liệu/maidung/KGChat-03/backend/configs/configs.yml", help="Path to config file")
     args = parser.parse_args()
 
     configs = load_config(args.config)
@@ -53,7 +53,7 @@ def main():
     limit = insert_config.get("Limit", None)
     resume = insert_config.get("Resume", False)
 
-    output_dir = Path("/Users/maitiendung/TAI LIEU/HOME/KG_github_2911")
+    output_dir = Path("/home/nguyenthang/Bản tải về")
     nodes_path = output_dir / "nodes.csv"
     edges_path = output_dir / "edges.csv"
 

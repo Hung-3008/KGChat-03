@@ -16,7 +16,8 @@ from backend.retrieval.triple_level_retrieval import (
     format_retrieval_results,
     create_rag_prompt,
     save_retrieval_result,
-    sanitize_filename
+    sanitize_filename,
+    self_refine,
 )
 from backend.db.neo4j_client import Neo4jClient
 from backend.utils.logging import get_logger
@@ -154,6 +155,7 @@ def convert_conversation_history_to_list(
 
 
 async def retrieve_and_format_kg_results(
+    query: str,
     high_level_keywords: List[str],
     low_level_keywords: List[str],
     neo4j_client: Neo4jClient,
@@ -177,15 +179,31 @@ async def retrieve_and_format_kg_results(
     Returns:
         Tuple of (retrieval_result dict, formatted_text string)
     """
-    retrieval_result = await retrieve_from_knowledge_graph(
+    lv1_nodes, lv2_nodes, relations = await retrieve_from_knowledge_graph(
         high_level_keywords=high_level_keywords,
         low_level_keywords=low_level_keywords,
         neo4j_client=neo4j_client,
         embedding_client=embedding_client,
         qdrant_client=qdrant_client,
         top_k=top_k,
+        max_distance=max_distance,
         similarity_threshold=similarity_threshold
     )
+
+    lv1_nodes_self_refine, lv2_nodes_self_refine, relations_self_refine = await self_refine(
+        lv1_nodes=lv1_nodes,
+        lv2_nodes=lv2_nodes,
+        relationships=relations,
+        neo4j_client=neo4j_client,
+        query=query,
+        max_iterations=max_iterations
+    )
+
+    retrieval_result = {
+        "level1_nodes": lv1_nodes_self_refine,
+        "level2_nodes": lv2_nodes_self_refine,
+        "relationships": relations_self_refine
+    }
 
     formatted_text = ""
     if retrieval_result.get('level1_nodes') or retrieval_result.get('level2_nodes'):
@@ -341,6 +359,7 @@ class KnowledgeGraphQueryProcessor:
 
                         # Retrieve and format knowledge graph results
                         retrieval_result, formatted_text = await retrieve_and_format_kg_results(
+                            query=query,
                             high_level_keywords=high_level_keywords,
                             low_level_keywords=low_level_keywords,
                             neo4j_client=self.neo4j_client,
@@ -400,6 +419,7 @@ class KnowledgeGraphQueryProcessor:
 
                         # Retrieve and format knowledge graph results
                         retrieval_result, formatted_text = await retrieve_and_format_kg_results(
+                            query=query,
                             high_level_keywords=high_level_keywords,
                             low_level_keywords=low_level_keywords,
                             neo4j_client=self.neo4j_client,

@@ -1,0 +1,150 @@
+
+============================================================
+STARTING TRIPLE LEVEL RETRIEVER TESTS
+============================================================
+============================================================
+INITIALIZE CLIENTS
+============================================================
+
+Initializing Gemini Client...
+Gemini Client initialized successfully
+
+Creating Gemini Embedding Wrapper...
+Gemini Embedding Wrapper created successfully (replaces Ollama)
+   - Default using 768 dimensions for embeddings
+
+Initializing Qdrant Client...
+Qdrant Client initialized successfully
+   - Available collections: ['kg_lv1_nodes']
+   - Collection 'kg_lv1_nodes' has 8926 points
+   - Vector dimension: 768
+   Collection dimension (768) matches default
+
+Initializing Neo4j Client...
+Created Neo4jClient for bolt://localhost:7687
+Neo4j connectivity verified
+Neo4j connection test successful
+   - Number of Level1 nodes in database: 19564
+   Database has 19564 Level1 nodes
+Neo4j Client initialized successfully
+
+============================================================
+TEST: retrieve_from_knowledge_graph
+============================================================
+
+Query: noooooooo?
+High-level keywords: ['squamous cell carcinoma', 'xerostomia', 'cathepsin L']
+Low-level keywords: ['ovarian tumors', 'IVA', 'osteoarthritis', 'acute myocardial infarction']
+Embeddings already have correct 768 dimensions
+
+Retrieval results:
+   - Level 1 nodes: 15
+   - Level 2 nodes: 21
+   - Relationships: 23
+
+Sample Level 1 nodes:
+   1. Head and neck squamous cell carcinoma (Disease_or_Syndrome) - Score: 1.0000
+   2. squamous cell carcinoma head and neck (Level 2) - Score: 1.0000
+   3. squamous cell carcinoma of the head and neck (Level 2) - Score: 1.0000
+
+Sample Level 2 nodes:
+   1. squamous cell carcinoma head and neck (CUI: 275355) (Level 2)
+   2. squamous cell carcinoma of the head and neck (CUI: 275355) (Level 2)
+   3. carcinoma squamous cell of head and neck (CUI: 275355) (Level 2)
+
+============================================================
+TEST: retrieve_level2_references
+============================================================
+
+Testing with 3 Level 1 nodes
+
+Retrieved:
+   - Level 2 nodes: 3
+   - Relationships: 3
+
+Sample Level 2 nodes:
+   1. squamous cell carcinoma head and neck (CUI: 275355) (Level 2)
+   2. squamous cell carcinoma of the head and neck (CUI: 275355) (Level 2)
+   3. carcinoma squamous cell of head and neck (CUI: 275355) (Level 2)
+
+============================================================
+TEST: retrieve_level3_references
+============================================================
+
+Testing with 3 Level 2 nodes
+
+Level 2 nodes being tested:
+   1. squamous cell carcinoma head and neck (CUI: 275355)
+   2. squamous cell carcinoma of the head and neck (CUI: 275355)
+   3. carcinoma squamous cell of head and neck (CUI: 275355)
+
+Retrieved:
+   - Level 3 nodes: 0
+   - Relationships: 0
+
+Warning: NO LEVEL 3 NODES FOUND - Possible reasons:
+   1. Level2 nodes do not have CUI
+   2. No Level3 nodes have level2_node_id matching Level2 CUI
+   3. Database has no Level3 data
+
+For full testing, you need:
+   - Ensure Level2 nodes have CUI
+   - Ensure Level3 nodes have level2_node_id matching Level2 CUI
+
+============================================================
+TEST: Format Functions
+============================================================
+
+Testing format_retrieval_results...
+Formatted text length: 1350 characters
+Preview (first 500 chars):
+# KEY CONCEPTS
+
+## DISEASE_OR_SYNDROMES
+* **Head and neck squamous cell carcinoma**
+* **squamous cell carcinoma**
+
+## LEVEL 2S
+* **squamous cell carcinoma head and neck**
+* **squamous cell carcinoma of the head and neck**
+* **squamous cell carcinomas**: A carcinoma derived from stratified SQUAMOUS EPITHELIAL CELLS
+
+# RELATIONSHIPS
+
+## REF_TO
+* Head and neck squamous cell carcinoma → squamous cell carcinoma head and neck
+* Head and neck squamous cell carcinoma → squamous cell carcinoma of the hea...
+
+Formatted text information:
+   - Total characters: 1350
+   - Number of lines: 38
+   Has section KEY CONCEPTS
+   Has section RELATIONSHIPS
+   Has section DETAILED INFORMATION
+
+============================================================
+TEST: self_refine
+============================================================
+Embeddings already have correct 768 dimensions
+Initial counts: L1=5, L2=5, Rels=12
+
+Running self_refine...
+
+Refinement results:
+   - Level 1 nodes: 5 (Original: 5)
+   - Level 2 nodes: 5 (Original: 5)
+   - Relationships: 16 (Original: 12)
+
+============================================================
+CLOSING CONNECTIONS
+============================================================
+Neo4j connection closed
+
+============================================================
+ALL TESTS COMPLETED
+============================================================
+
+SUMMARY:
+Retrieved 36 nodes from knowledge graph
+   - Level 1: 15
+   - Level 2: 21

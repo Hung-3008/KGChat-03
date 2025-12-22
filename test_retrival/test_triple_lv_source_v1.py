@@ -26,12 +26,13 @@ try:
     from qdrant_client import QdrantClient
     from backend.db.neo4j_client import Neo4jClient
     from backend.db.vector_db import VectorDBClient
-    from backend.retrieval.triple_level_retriever import (
+    from backend.retrieval.triple_level_retrieval import (
         retrieve_from_knowledge_graph,
         retrieve_level1_nodes,
         retrieve_level2_references,
         retrieve_level3_references,
-        format_retrieval_results)
+        format_retrieval_results,
+        self_refine)
 except ImportError as e:
     print(f"Error importing modules: {e}")
     import traceback
@@ -61,8 +62,8 @@ async def initialize_clients():
     print("\nInitializing Gemini Client...")
     try:
         gemini_config = GeminiConfig(
-            api_key=os.getenv("GEMINI_API_KEY_2") or os.getenv(
-                "GEMINI_API_KEY_1"),
+            api_key=os.getenv("GEMINI_API_KEY_15") or os.getenv(
+                "GEMINI_API_KEY_16"),
             model_name=os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         )
         clients["gemini_client"] = GeminiClient(gemini_config)
@@ -341,16 +342,18 @@ async def test_retrieve_from_knowledge_graph(clients):
             high_level_keywords=high_keywords,
             low_level_keywords=low_keywords,
             neo4j_client=clients["neo4j_client"],
-            ollama_client=clients["ollama_client"],
+            embedding_client=clients["ollama_client"],
             qdrant_client=clients["qdrant_client"],
             top_k=5,
             similarity_threshold=0.7
         )
 
         print("\nRetrieval results:")
-        l1_nodes = len(result.get('level1_nodes', []))
-        l2_nodes = len(result.get('level2_nodes', []))
-        relationships = len(result.get('relationships', []))
+        level1_nodes, level2_nodes, relationships = result
+        
+        l1_nodes = len(level1_nodes)
+        l2_nodes = len(level2_nodes)
+        relationships = len(relationships)
 
         print(f"   - Level 1 nodes: {l1_nodes}")
         print(f"   - Level 2 nodes: {l2_nodes}")
@@ -373,18 +376,18 @@ async def test_retrieve_from_knowledge_graph(clients):
                 "   - Ensure embeddings in Qdrant are created from same model as query embeddings")
 
         # Display sample nodes
-        if result.get('level1_nodes'):
+        if level1_nodes:
             print("\nSample Level 1 nodes:")
-            for i, node in enumerate(result['level1_nodes'][:3], 1):
+            for i, node in enumerate(level1_nodes[:3], 1):
                 # Use semantic_type if available, fallback to entity_type for backward compatibility
                 node_type = node.get('semantic_type') or node.get(
                     'entity_type', 'Unknown')
                 print(
                     f"   {i}. {node.get('name', 'Unknown')} ({node_type}) - Score: {node.get('similarity_score', 0):.4f}")
 
-        if result.get('level2_nodes'):
+        if level2_nodes:
             print("\nSample Level 2 nodes:")
-            for i, node in enumerate(result['level2_nodes'][:3], 1):
+            for i, node in enumerate(level2_nodes[:3], 1):
                 cui = node.get('cui', '')
                 cui_str = f" (CUI: {cui})" if cui else ""
                 semantic_types = node.get('semantic_types', [])
@@ -805,6 +808,49 @@ async def test_format_functions(level1_nodes, level2_nodes, relationships):
         traceback.print_exc()
 
 
+async def test_self_refine(clients):
+    print("\n" + "=" * 60)
+    print("TEST: self_refine")
+    print("=" * 60)
+    
+    test_query = "What are the recommended dietary changes for managing Type 2 diabetes?"
+    high_keywords = ["Type 2 Diabetes", "dietary changes"]
+    low_keywords = ["carbohydrate intake", "fiber consumption", "processed foods"]
+    
+    try:
+        # Initial retrieval
+        result = await retrieve_from_knowledge_graph(
+            high_level_keywords=high_keywords,
+            low_level_keywords=low_keywords,
+            neo4j_client=clients["neo4j_client"],
+            embedding_client=clients["ollama_client"],
+            qdrant_client=clients["qdrant_client"],
+            top_k=5,
+            similarity_threshold=0.7
+        )
+        
+        level1_nodes, level2_nodes, relationships = result
+        
+        print(f"Initial counts: L1={len(level1_nodes)}, L2={len(level2_nodes)}, Rels={len(relationships)}")
+        
+        print("\nRunning self_refine...")
+        l1_refined, l2_refined, rels_refined = await self_refine(
+            level1_nodes, level2_nodes, relationships,
+            clients["neo4j_client"], clients["gemini_client"],
+            test_query, max_iterations=2
+        )
+        
+        print("\nRefinement results:")
+        print(f"   - Level 1 nodes: {len(l1_refined)} (Original: {len(level1_nodes)})")
+        print(f"   - Level 2 nodes: {len(l2_refined)} (Original: {len(level2_nodes)})")
+        print(f"   - Relationships: {len(rels_refined)} (Original: {len(relationships)})")
+        
+    except Exception as e:
+        print(f"\nError testing self_refine: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 async def main():
     """Main function to run all tests"""
     print("\n" + "=" * 60)
@@ -823,7 +869,7 @@ async def main():
     # Test 2: retrieve_level1_nodes (if test 1 succeeded)
     level1_nodes = None
     if kg_result:
-        level1_nodes = kg_result.get('level1_nodes', [])
+        level1_nodes, _, _ = kg_result
 
     # If no nodes from test 1, test retrieve_level1_nodes separately
     if not level1_nodes:
@@ -838,6 +884,10 @@ async def main():
 
     # Test 5: Format functions
     await test_format_functions(level1_nodes, level2_nodes, relationships)
+
+    # Test 6: self_refine
+    await test_self_refine(clients)
+    
 
     # Close connections
     print("\n" + "=" * 60)
@@ -861,8 +911,9 @@ async def main():
     # Summary of results
     print("\nSUMMARY:")
     if kg_result:
-        total_nodes = (len(kg_result.get('level1_nodes', [])) +
-                       len(kg_result.get('level2_nodes', [])))
+        level1_nodes, level2_nodes, _ = kg_result
+        total_nodes = len(level1_nodes) + len(level2_nodes)
+        
         if total_nodes == 0:
             print("Warning: No nodes retrieved")
             print("For full testing, you need:")
@@ -872,12 +923,45 @@ async def main():
                 "   - Ensure Qdrant point 'id' matches Neo4j node 'id'")
         else:
             print(f"Retrieved {total_nodes} nodes from knowledge graph")
-            print(f"   - Level 1: {len(kg_result.get('level1_nodes', []))}")
-            print(f"   - Level 2: {len(kg_result.get('level2_nodes', []))}")
+            print(f"   - Level 1: {len(level1_nodes)}")
+            print(f"   - Level 2: {len(level2_nodes)}")
     else:
         print("Warning: Cannot test retrieval - Qdrant or Neo4j may have no data")
 
 
+class Tee:
+    def __init__(self, *files):
+        self.files = files
+
+    def write(self, obj):
+        for f in self.files:
+            f.write(obj)
+            f.flush()
+
+    def flush(self,):
+        for f in self.files:
+            f.flush()
+
 if __name__ == "__main__":
-    # Run async main
-    asyncio.run(main())
+    # Create test_results directory if it doesn't exist
+    import os
+    import sys
+    import datetime
+    import asyncio
+    
+    output_dir = "test_results"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(output_dir, f"test_result_{timestamp}.txt")
+    
+    print(f"Saving test results to: {log_file}")
+    
+    original_stdout = sys.stdout
+    with open(log_file, "w") as f:
+        sys.stdout = Tee(original_stdout, f)
+        try:
+            asyncio.run(main())
+        finally:
+            sys.stdout = original_stdout
+            print(f"\nTest results saved to: {log_file}")

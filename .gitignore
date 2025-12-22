@@ -109,3 +109,5 @@ package-lock.json
 wget-log
 storage/
 .qdrant-initialized
+output_pipeline_retrie/*
+test_results/*

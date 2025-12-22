@@ -1,0 +1,131 @@
+
+============================================================
+STARTING TRIPLE LEVEL RETRIEVER TESTS
+============================================================
+============================================================
+INITIALIZE CLIENTS
+============================================================
+
+Initializing Gemini Client...
+Gemini Client initialized successfully
+
+Creating Gemini Embedding Wrapper...
+Gemini Embedding Wrapper created successfully (replaces Ollama)
+   - Default using 768 dimensions for embeddings
+
+Initializing Qdrant Client...
+Qdrant Client initialized successfully
+   - Available collections: ['kg_lv1_nodes']
+   - Collection 'kg_lv1_nodes' has 8926 points
+   - Vector dimension: 768
+   Collection dimension (768) matches default
+
+Initializing Neo4j Client...
+Created Neo4jClient for bolt://localhost:7687
+Neo4j connectivity verified
+Neo4j connection test successful
+   - Number of Level1 nodes in database: 19564
+   Database has 19564 Level1 nodes
+Neo4j Client initialized successfully
+
+============================================================
+TEST: retrieve_from_knowledge_graph
+============================================================
+
+Query: noooooooo?
+High-level keywords: ['squamous cell carcinoma', 'xerostomia', 'cathepsin L']
+Low-level keywords: ['ovarian tumors', 'IVA', 'osteoarthritis', 'acute myocardial infarction']
+Embeddings already have correct 768 dimensions
+
+Retrieval results:
+   - Level 1 nodes: 15
+   - Level 2 nodes: 21
+   - Relationships: 23
+
+Sample Level 1 nodes:
+   1. Head and neck squamous cell carcinoma (Disease_or_Syndrome) - Score: 1.0000
+   2. squamous cell carcinoma head and neck (Level 2) - Score: 1.0000
+   3. squamous cell carcinoma of the head and neck (Level 2) - Score: 1.0000
+
+Error testing retrieve_from_knowledge_graph: 'tuple' object has no attribute 'get'
+
+============================================================
+TEST: retrieve_level1_nodes
+============================================================
+
+Test keywords: ['diabetes', 'treatment']
+Embeddings already have correct 768 dimensions
+Created 2 embeddings using Gemini
+
+Retrieved 0 Level 1 nodes
+
+Warning: NO NODES FOUND - Possible reasons:
+   1. Qdrant collection 'kg_lv1_nodes' has no data
+   2. Neo4j database has no corresponding data
+   3. Embeddings do not match data in Qdrant
+   4. Similarity threshold too high (current: 0.7)
+   5. Node IDs in Qdrant (point id) do not match Neo4j 'id' field
+
+============================================================
+TEST: retrieve_level2_references
+============================================================
+Warning: No Level 1 nodes to test, skipping this test
+
+============================================================
+TEST: retrieve_level3_references
+============================================================
+Warning: No Level 2 nodes to test, skipping this test
+Trying to get Level2 nodes directly from database...
+Retrieved 5 Level2 nodes from database
+
+Testing with 5 Level 2 nodes
+
+Level 2 nodes being tested:
+   1. caped (CUI: 136550)
+   2. cdg ic (CUI: 603147)
+   3. cdg ig (CUI: C2931001)
+   4. hnscc (CUI: 275355)
+   5. hcc (CUI: C2239176)
+
+Retrieved:
+   - Level 3 nodes: 0
+   - Relationships: 0
+
+Warning: NO LEVEL 3 NODES FOUND - Possible reasons:
+   1. Level2 nodes do not have CUI
+   2. No Level3 nodes have level2_node_id matching Level2 CUI
+   3. Database has no Level3 data
+
+For full testing, you need:
+   - Ensure Level2 nodes have CUI
+   - Ensure Level3 nodes have level2_node_id matching Level2 CUI
+
+============================================================
+TEST: Format Functions
+============================================================
+Warning: No nodes to test, skipping this test
+
+============================================================
+TEST: self_refine
+============================================================
+Embeddings already have correct 768 dimensions
+Initial counts: L1=5, L2=5, Rels=12
+
+Running self_refine...
+
+Refinement results:
+   - Level 1 nodes: 5 (Original: 5)
+   - Level 2 nodes: 5 (Original: 5)
+   - Relationships: 16 (Original: 12)
+
+============================================================
+CLOSING CONNECTIONS
+============================================================
+Neo4j connection closed
+
+============================================================
+ALL TESTS COMPLETED
+============================================================
+
+SUMMARY:
+Warning: Cannot test retrieval - Qdrant or Neo4j may have no data

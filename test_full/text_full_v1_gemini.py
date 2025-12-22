@@ -28,8 +28,9 @@ try:
     from backend.llm.providers.gemini.gemini_config import GeminiConfig
     from backend.pipeline.query_analyzer import analyze_query, QueryIntent
     from backend.pipeline.keyword_extractor import extract_keywords
-    from backend.retrieval.triple_level_retriever import (
+    from backend.retrieval.triple_level_retrieval import (
         retrieve_from_knowledge_graph,
+        self_refine,
         format_retrieval_results
     )
     from backend.encoders.transformer_encoder import TransformerEncoder
@@ -55,8 +56,8 @@ async def initialize_clients():
     print("\n📌 Khởi tạo Gemini Client...")
     try:
         gemini_config = GeminiConfig(
-            api_key=os.getenv("GEMINI_API_KEY_2") or os.getenv(
-                "GEMINI_API_KEY_1") or os.getenv("GEMINI_API_KEY_16"),
+            api_key=os.getenv("GEMINI_API_KEY_9") or os.getenv(
+                "GEMINI_API_KEY_11") or os.getenv("GEMINI_API_KEY_10"),
             model_name=os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         )
         clients["gemini_client"] = GeminiClient(gemini_config)
@@ -695,17 +696,31 @@ async def process_query_full_pipeline(query: str, conversation_history=None, cli
                 print(
                     f"\n🔍 Đang truy vấn với similarity threshold: {similarity_threshold}")
 
-                retrieval_result = await retrieve_from_knowledge_graph(
+                lv1_nodes, lv2_nodes, relations = await retrieve_from_knowledge_graph(
                     high_level_keywords=high_level_keywords,
                     low_level_keywords=low_level_keywords,
                     neo4j_client=neo4j_client,
-                    ollama_client=ollama_client,
+                    embedding_client=embedding_client,
                     qdrant_client=qdrant_client,
-                    top_k=10,  # Tăng top_k để tìm nhiều nodes hơn
+                    top_k=top_k,
+                    max_distance=max_distance,
                     similarity_threshold=similarity_threshold
                 )
 
-                result["retrieval_result"] = retrieval_result
+                lv1_nodes_self_refine, lv2_nodes_self_refine, relations_self_refine = await self_refine(
+                    lv1_nodes=lv1_nodes,
+                    lv2_nodes=lv2_nodes,
+                    relationships=relations,
+                    neo4j_client=neo4j_client,
+                    query=query,
+                    max_iterations=max_iterations
+                )
+
+                retrieval_result = {
+                    "level1_nodes": lv1_nodes_self_refine,
+                    "level2_nodes": lv2_nodes_self_refine,
+                    "relationships": relations_self_refine
+                }
 
                 # Hiển thị kết quả
                 l1_nodes = len(retrieval_result.get('level1_nodes', []))
