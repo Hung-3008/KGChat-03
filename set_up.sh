@@ -8,49 +8,33 @@
 # export GOOGLE_APPLICATION_CREDENTIALS="/home/hung/.gcp-keys/vertex-ai-key.json"
 
 
-# Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo "Docker not found. Installing Docker on Ubuntu..."
-    
-    # Add Docker's official GPG key:
-    sudo apt-get update
-    sudo apt-get install -y ca-certificates curl gnupg
-    sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+# Install & Run Qdrant (Binary mode)
+echo "Installing Qdrant..."
+QDRANT_VERSION="latest" # Or latest
+wget https://github.com/qdrant/qdrant/releases/download/${QDRANT_VERSION}/qdrant-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf qdrant-x86_64-unknown-linux-gnu.tar.gz
 
-    # Add the repository to Apt sources:
-    echo \
-      "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" | \
-      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# Prepare storage directories to match docker-compose logic
+mkdir -p qdrant_storage
+mkdir -p qdrant_snapshots
 
-    # Enable and start Docker service
-    sudo systemctl enable docker
-    sudo systemctl start docker
+# Stop existing qdrant if running
+pkill qdrant || true
 
-    # Add current user to docker group
-    sudo usermod -aG docker $USER
-    echo "Docker installed successfully. Please log out and back in for group changes to take effect."
-else
-    echo "Docker is already installed."
-fi
+#rm -rf storage
+ln -s qdrant_storage storage
+#rm -rf snapshots
+ln -s qdrant_snapshots snapshots
 
+echo "Starting Qdrant..."
+nohup ./qdrant > qdrant.log 2>&1 &
 
-# Download data
-pip install gdown
-
-gdown 1j7fHaB-Oe0vZsMs3fTqD6Rr9vI50Li7r # part 2
-gdown 12ZTo0oLpkFucgdxDrhEWnTEOGnAPxAdV # model.bin 
-gdown 1PJRVZHrHzCUXqYS-Tc02HdcTycqwN6zd # snapshot 
-
-# qdrant 
-docker pull qdrant/qdrant
-docker compose up -d
 
 # requirements 
 pip install -r requirements.txt
 
+# apt-get install -y rsync
+# rsync -P -r hung@100.88.234.38:/media/hung/data1/codes/projects/FHC/backups/snapshot/ .
+
+
+rclone backend copyid kgchat: 1Fq0ev90cRZi3_RuKFL-ISJkjT7ifYRId . -P
