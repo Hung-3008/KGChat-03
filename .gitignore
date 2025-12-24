@@ -107,8 +107,15 @@ qdrant
 qdrant-x86_64-unknown-linux-gnu.tar.gz
 package-lock.json
 wget-log
-storage/
+storage
 .qdrant-initialized
 backups/*
 qdrant_snapshots/*
 ./agent/*
+snapshots
+snapshot/*
+snapshot
+split_from_pmc_part1/*
+snapshot.zip
+split_from_pmc_part1.zip
+storage

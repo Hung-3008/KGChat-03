@@ -100,7 +100,7 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../../"))
     # Point to the correct snapshot directory
-    backup_dir = os.path.join(project_root, "qdrant_snapshots", "kg_lv2_nodes")
+    backup_dir = "/workspace/sdb1/KGChat-03/snapshot/"
     
     # Collection name
     collection_name = "kg_lv2_nodes"

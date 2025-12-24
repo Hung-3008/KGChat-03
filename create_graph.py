@@ -85,7 +85,7 @@ def main():
     # Should ideally be >= number of ports to utilize all ports
     max_parallel_files = create_config.get("max_parallel_files", 5) 
     
-    data_dir = Path("data/PMC_Part1")
+    data_dir = Path("split_from_pmc_part1")
     if not data_dir.exists():
         logger.error(f"Data directory not found: {data_dir}")
         return
@@ -103,27 +103,38 @@ def main():
     
     # --- Initialize Resources ---
     
-    # 1. Initialize Shared Encoder
-    logger.info("Initializing Shared Encoder...")
+    # 1. Initialize Encoder Pool
+    logger.info("Initializing Encoder Pool...")
     encoder_config = configs.get("Encoder", {})
     embedding_model = encoder_config.get("model_name", "intfloat/multilingual-e5-base")
     device = encoder_config.get("device", "cpu")
-    shared_encoder = TransformerEncoder(model_name=embedding_model, device=device)
+    
+    # Create a pool of encoders to avoid bottleneck
+    num_encoders = 4 
+    encoder_pool = []
+    for i in range(num_encoders):
+        logger.info(f"Loading Encoder {i+1}/{num_encoders}...")
+        encoder_pool.append(TransformerEncoder(model_name=embedding_model, device=device))
     
     # 2. Initialize GraphExtractors Pool
     # Ports mapping to docker instances
     ollama_config = configs.get("Ollama", {})
-    OLLAMA_PORTS = ollama_config.get("ports", [11434, 11435, 11436, 11437, 11438])
+    base_port = ollama_config.get("base_port", 11434)
+    num_ports = ollama_config.get("num_ports", 5)
+    OLLAMA_PORTS = [base_port + i for i in range(num_ports)]
     extractor_queue = queue.Queue()
     
     logger.info(f"Initializing {len(OLLAMA_PORTS)} GraphExtractors for ports {OLLAMA_PORTS}...")
-    for port in OLLAMA_PORTS:
+    for i, port in enumerate(OLLAMA_PORTS):
         base_url = f"http://localhost:{port}"
+        # Assign encoder round-robin
+        assigned_encoder = encoder_pool[i % num_encoders]
+        
         # Create extractor sharing the encoder
         ex = GraphExtractor(
             config_path=config_path, 
             time_logger=time_logger,
-            encoder=shared_encoder, 
+            encoder=assigned_encoder, 
             llm_base_url=base_url
         )
         extractor_queue.put(ex)

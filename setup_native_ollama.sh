@@ -1,9 +1,24 @@
-# Start additional Ollama instances on ports 11435-11438
-# Port 11434 is assumed to be running via system service, but we check it too.
+#!/bin/bash
+# Start Ollama instances on ports defined in backend/configs/configs.yml
+
+# Hardcoded Configuration
+# You can manually change these values
+BASE_PORT=11434
+NUM_PORTS=12
+
+echo "Configuration: Base Port=$BASE_PORT, Num Ports=$NUM_PORTS"
+
+# Generate ports array
+PORTS=()
+for ((i=0; i<NUM_PORTS; i++)); do
+    PORTS+=($((BASE_PORT + i)))
+done
+
+echo "Found ${#PORTS[@]} ports: ${PORTS[*]}"
 
 # Configuration
-export OLLAMA_NUM_PARALLEL=4
-export OLLAMA_MAX_LOADED_MODELS=1 # Ensure we don't load too many models per instance if VRAM is tight
+export OLLAMA_NUM_PARALLEL=1
+export OLLAMA_MAX_LOADED_MODELS=5 # Ensure we don't load too many models per instance if VRAM is tight
 
 # Function to start if not running
 start_ollama() {
@@ -16,19 +31,18 @@ start_ollama() {
     fi
 }
 
-# Start instances
-start_ollama 11434
-start_ollama 11435
-start_ollama 11436
-start_ollama 11437
-start_ollama 11438
+# Start instances for each port in config
+for port in "${PORTS[@]}"; do
+    start_ollama $port
+    sleep 2 # Wait 2s to avoid race condition on GPU init
+done
 
 echo "Waiting for services to start..."
 sleep 5
 
 # Verify
 echo "Verifying ports:"
-for port in 11434 11435 11436 11437 11438; do
+for port in "${PORTS[@]}"; do
     if curl -s http://localhost:$port/api/tags >/dev/null; then
         echo "Port $port: UP"
     else

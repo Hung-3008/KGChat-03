@@ -1,4 +1,4 @@
-from ollama import chat
+from ollama import Client
 from typing import Optional, Dict, Union
 from pydantic import BaseModel
 
@@ -10,12 +10,16 @@ class OllamaClient:
         self.top_p = config.get("top_p", 0.9)
         # optional seed for reproducibility if supported by Ollama
         self.seed = config.get("seed", None)
+        
+        base_url = config.get("base_url", "http://localhost:11434")
+        self.client = Client(host=base_url)
+
     def _normal_response(self, prompt: str) -> str:
         options = {"temperature": self.temperature, "top_p": self.top_p}
         if self.seed is not None:
             options["seed"] = self.seed
 
-        response = chat(
+        response = self.client.chat(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             options=options,
@@ -32,7 +36,7 @@ class OllamaClient:
         else:
             schema = format.model_json_schema()
 
-        response = chat(
+        response = self.client.chat(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             format=schema,
