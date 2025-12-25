@@ -18,7 +18,7 @@ from backend.pipeline.kg_query_processor import (
     KnowledgeGraphQueryProcessor,
     convert_conversation_history_to_list
 )
-from backend.retrieval.triple_level_retrieval import (
+from backend.retrieval.utils import(
     save_retrieval_result,
     sanitize_filename
 )

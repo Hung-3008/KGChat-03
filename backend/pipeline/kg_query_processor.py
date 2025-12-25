@@ -14,11 +14,13 @@ from backend.pipeline.keyword_extractor import extract_keywords
 from backend.retrieval.triple_level_retrieval import (
     retrieve_from_knowledge_graph,
     format_retrieval_results,
+)
+from backend.retrieval.utils import (
     create_rag_prompt,
     save_retrieval_result,
     sanitize_filename,
-    self_refine,
 )
+from backend.pipeline.self_refine import self_refine
 from backend.db.neo4j_client import Neo4jClient
 from backend.utils.logging import get_logger
 from backend.pipeline_prompts import (
