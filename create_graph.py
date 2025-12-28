@@ -85,7 +85,7 @@ def main():
     # Should ideally be >= number of ports to utilize all ports
     max_parallel_files = create_config.get("max_parallel_files", 5) 
     
-    data_dir = Path("split_from_pmc_part1")
+    data_dir = Path("data/PMC_Part1")
     if not data_dir.exists():
         logger.error(f"Data directory not found: {data_dir}")
         return

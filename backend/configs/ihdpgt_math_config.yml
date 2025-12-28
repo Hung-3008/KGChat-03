@@ -1,0 +1,46 @@
+Retrieval:
+  # Global LLM Settings for Retrieval
+  LLM:
+    client: "ollama"
+    model: "llama3.1:8b" 
+    temperature: 0.0
+    base_url: "http://localhost:11434"
+    concurrency: 5 
+
+  # Pipeline Steps Configuration
+  Decomposition:
+    strategy: "chain_of_thought"
+    max_sub_questions: 5
+
+  EntityLinking:
+    confidence_threshold: 0.7
+
+  GraphTraversal:
+    # Math Plugin Settings
+    algorithm: "ppr" 
+    relations: 
+      - "TREATS"
+      - "CAUSES"
+      - "ASSOCIATED_WITH"
+      - "HAS_SYMPTOM"
+      - "PREVENTS"
+    
+  Math:
+    ppr_damping: 0.85
+    subgraph_hops: 2
+    subgraph_limit: 5000
+    bayesian_threshold: 0.5
+
+  Retrieval:
+    # Vector DB (Qdrant) settings
+    collection_name: "kg_lv1_nodes"
+    top_k_dense: 10
+    top_k_sparse: 0 # Not using sparse for now
+    fusion_method: "bayesian" # New method
+
+  Verification:
+    strictness: "moderate"
+
+Encoder:
+  model_name: "dmis-lab/biobert-v1.1"
+  device: "cuda"

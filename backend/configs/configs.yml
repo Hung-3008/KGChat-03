@@ -19,12 +19,12 @@ Create:
   Limit: null
   Resume: True
   max_parallel_chunks: 4
-  max_parallel_files: 12
+  max_parallel_files: 4
 
 Insert:
-  Batch_size: 1
-  Limit: 100000
-  Resume: True
+  Batch_size: 100
+  Limit: null
+  Resume: False
 
 Qdrant:
   timeout: 300 
@@ -32,4 +32,4 @@ Qdrant:
 
 Ollama:
   base_port: 11434
-  num_ports: 12
+  num_ports: 4

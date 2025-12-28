@@ -4,7 +4,7 @@
 # Hardcoded Configuration
 # You can manually change these values
 BASE_PORT=11434
-NUM_PORTS=12
+NUM_PORTS=4
 
 echo "Configuration: Base Port=$BASE_PORT, Num Ports=$NUM_PORTS"
 
@@ -18,7 +18,8 @@ echo "Found ${#PORTS[@]} ports: ${PORTS[*]}"
 
 # Configuration
 export OLLAMA_NUM_PARALLEL=1
-export OLLAMA_MAX_LOADED_MODELS=5 # Ensure we don't load too many models per instance if VRAM is tight
+export OLLAMA_MAX_LOADED_MODELS=1 # Ensure we don't load too many models per instance if VRAM is tight
+#export OLLAMA_MODELS=/usr/share/ollama/.ollama/models
 
 # Function to start if not running
 start_ollama() {

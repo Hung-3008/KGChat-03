@@ -88,7 +88,7 @@ class Neo4jHelper:
             n.cui = node.cui,
             n.level = node.level
         WITH n, node
-        CALL apoc.do.when(node.level = 'Level 2', 'SET n:Level2', '', {n:n}) YIELD value
+        CALL apoc.do.when(coalesce(node.level, '') = 'Level 2', 'SET n:Level2', '', {n:n}) YIELD value
         RETURN count(value) as nodes_processed
         """
         try:
@@ -118,9 +118,10 @@ class Neo4jHelper:
         try:
             with self.driver.session() as session:
                 result = session.run(query, edges=edges)
-                summary = result.consume()
-                logger.debug(f"Inserted batch: {summary.counters.relationships_created} relationships created")
-                return summary.counters.relationships_created
+                record = result.single()
+                count = record["edges_processed"] if record else 0
+                logger.debug(f"Inserted batch: {count} relationships created")
+                return count
         except Exception as e:
             logger.error(f"Failed to insert edges batch: {e}")
             logger.error(f"First edge in batch: {edges[0] if edges else 'empty batch'}")
@@ -133,3 +134,41 @@ class Neo4jHelper:
         with self.driver.session() as session:
             result = session.run(cypher_query, parameters or {})
             return [record.data() for record in result]
+
+    def get_subgraph(self, seed_node_ids: List[str], hops: int = 2, limit: int = 2000) -> Dict:
+        """
+        Fetches a subgraph centered around the seed nodes.
+        Returns a dict with 'nodes' and 'relationships'.
+        """
+        query = f"""
+        MATCH (start:Level1)
+        WHERE start.id IN $seed_ids
+        CALL apoc.path.subgraphAll(start, {{
+            maxLevel: $hops,
+            limit: $limit
+        }})
+        YIELD nodes, relationships
+        RETURN nodes, relationships
+        """
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, seed_ids=seed_node_ids, hops=hops, limit=limit)
+                record = result.single()
+                if not record:
+                    return {"nodes": [], "relationships": []}
+                
+                # Format for networkx
+                nodes = [dict(n) for n in record["nodes"]] # Neo4j nodes to dict
+                rels = []
+                for r in record["relationships"]:
+                    rels.append({
+                        "source": r.start_node["id"], 
+                        "target": r.end_node["id"],
+                        "type": r.type,
+                        "weight": 1.0 # Default weight
+                    })
+                    
+                return {"nodes": nodes, "relationships": rels}
+        except Exception as e:
+            logger.error(f"Failed to get subgraph: {e}")
+            return {"nodes": [], "relationships": []}

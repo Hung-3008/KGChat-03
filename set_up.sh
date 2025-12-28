@@ -103,5 +103,10 @@ echo "- rclone: Installed and ready"
 echo "- Python requirements: Installed"
 echo ""
 
-#rclone backend copyid iitp: 1Fq0ev90cRZi3_RuKFL-ISJkjT7ifYRId snapshot.zip -P
-#https://drive.google.com/file/d/13kwWOY7j-hg9t9DOURH8wjJKdUi1EONC/view?usp=sharing
+
+# gdowm: snapshot, model.bin, data 
+# config rclone 
+# rclone backend copyid may05: 1Fq0ev90cRZi3_RuKFL-ISJkjT7ifYRId snapshot.zip -P
+# https://drive.google.com/file/d/13kwWOY7j-hg9t9DOURH8wjJKdUi1EONC/view?usp=sharing
+# gdown 1XLTip64QcWuJYmGv7imoApbBXwxxb7JK
+# https://drive.google.com/file/d/1PJRVZHrHzCUXqYS-Tc02HdcTycqwN6zd/view?usp=sharing

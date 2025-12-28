@@ -97,15 +97,15 @@ class QdrantHelper:
     def search(self, collection_name: str, query_vector: List[float], limit: int = 5, score_threshold: float = 0.65) -> List[Dict]:
         """
         Search for similar vectors in the collection.
-        Returns a list of point IDs that have a similarity score > score_threshold.
+        Returns a list of point dicts with id, name, and full payload.
         """
         try:
-            results = self.client.search(
+            results = self.client.query_points(
                 collection_name=collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=limit,
                 with_payload=True 
-            )
+            ).points
             
             # Filter by score and extract IDs and names
             filtered_results = []
@@ -114,7 +114,9 @@ class QdrantHelper:
                     payload = point.payload or {}
                     filtered_results.append({
                         "id": str(point.id),
-                        "name": payload.get("name", "Unknown")
+                        "name": payload.get("name", "Unknown"),
+                        "payload": payload,
+                        "score": point.score
                     })
             
             logger.info(f"Found {len(results)} results, {len(filtered_results)} passed threshold {score_threshold}")

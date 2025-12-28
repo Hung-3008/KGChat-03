@@ -1,0 +1,42 @@
+Retrieval:
+  # Global LLM Settings for Retrieval
+  LLM:
+    client: "ollama"
+    model: "llama3.1:8b" 
+    temperature: 0.0
+    base_url: "http://localhost:11434"
+    concurrency: 5 # Number of concurrent requests for decomposition
+
+  # Pipeline Steps Configuration
+  Decomposition:
+    strategy: "chain_of_thought"
+    max_sub_questions: 5
+
+  EntityLinking:
+    # Entities to map to Neo4j
+    confidence_threshold: 0.7
+
+  GraphTraversal:
+    # 1-hop expansion settings
+    relations: 
+      - "TREATS"
+      - "CAUSES"
+      - "ASSOCIATED_WITH"
+      - "HAS_SYMPTOM"
+      - "PREVENTS"
+    limit_per_hop: 10
+
+  Retrieval:
+    # Vector DB (Qdrant) settings
+    collection_name: "kg_lv1_nodes"
+    top_k_dense: 5
+    top_k_sparse: 5
+    fusion_method: "reciprocal_rank_fusion"
+
+  Verification:
+    # Evidence verification settings
+    strictness: "moderate"
+
+Encoder:
+  model_name: "dmis-lab/biobert-v1.1"
+  device: "cuda"
