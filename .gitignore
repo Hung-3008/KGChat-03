@@ -120,3 +120,4 @@ snapshot.zip
 split_from_pmc_part1.zip
 storage
 methods
+!scripts/evaluate_medqa.py

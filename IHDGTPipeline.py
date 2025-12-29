@@ -144,7 +144,8 @@ class GraphTraverser:
             # We assume names are relatively clean or we use exact match for now.
             # Ideally, we should vector search for the node ID first, but for now specific Cypher.
             query = f"""
-            MATCH (n:Level1 {{name: $name}})-[r{rel_type_clause}]-(m:Level1)
+            MATCH (n:Level1) WHERE toLower(n.name) = toLower($name)
+            MATCH (n)-[r{rel_type_clause}]-(m:Level1)
             RETURN n.name as head, type(r) as relation, m.name as tail, m.id as tail_id, r.source as source
             LIMIT {self.limit}
             """
@@ -262,7 +263,7 @@ class EvidenceRetriever:
                 collection_name=self.collection_name,
                 query_vector=vector,
                 limit=self.top_k,
-                score_threshold=0.65 # Use threshold from helper default or config
+                score_threshold=0.45 # Lower threshold to ensure we get some context
             )
             
             # Helper now returns {"id", "name", "payload", "score"}
@@ -312,6 +313,17 @@ class Responser:
         self.llm = llm_client
     
     def generate_answer(self, query: str, context: List[Dict]) -> str:
+        if not context:
+            prompt = f"""
+            Answer the following clinical query using your internal medical knowledge. 
+            Reason step-by-step and provide the most appropriate answer.
+            
+            Query: {query}
+            
+            Answer:
+            """
+            return self.llm.generate(prompt)
+
         # Format verified paths
         facts = []
         for item in context:
@@ -393,25 +405,50 @@ class IHDGTPipeline:
                 sub_results = []
                 
                 # Step 4 & 5: Retrieval & Verification
-                for i, hyp in enumerate(hypotheses):
-                    verification_query = f"Does {hyp['triple_str']} in clinical context?"
-                    # logger.info(f"[Retrieve] Checking hypothesis {i+1}/{len(hypotheses)}: {hyp['triple_str']}")
-                    evidence = self.retriever.retrieve(verification_query)
-                    
-                    # Check validity
-                    verdict = self.verifier.verify(hyp, evidence)
-                    
-                    if verdict.get("is_valid", False):
-                        logger.info(f"  [Verify] VALID: {hyp['triple_str']}")
-                        sub_results.append({
-                            "path": hyp,
-                            "evidence": evidence,
-                            "verification": verdict
-                        })
-                    else:
-                         # logger.info(f"  [Verify] INVALID: {hyp['triple_str']}")
-                         pass
+                
+                def verify_single_hypothesis(hyp):
+                    try:
+                        verification_query = f"Does {hyp['triple_str']} in clinical context?"
+                        # logger.info(f"[Retrieve] Checking hypothesis {i+1}/{len(hypotheses)}: {hyp['triple_str']}")
+                        evidence = self.retriever.retrieve(verification_query)
                         
+                        # Check validity
+                        verdict = self.verifier.verify(hyp, evidence)
+                        
+                        if verdict.get("is_valid", False):
+                            logger.info(f"  [Verify] VALID: {hyp['triple_str']}")
+                            return {
+                                "path": hyp,
+                                "evidence": evidence,
+                                "verification": verdict
+                            }
+                    except Exception as e:
+                        logger.error(f"Error verifying hypothesis {hyp.get('triple_str')}: {e}")
+                    return None
+
+                # Parallelize verification of hypotheses
+                # Use a larger thread pool for I/O bound verification tasks if needed, 
+                # but we are bounded by LLM concurrency which is handled by OllamaClient load balancing
+                # and the global concurrency setting. 
+                # We can reuse the same max_workers strategy or even larger since we have multiple backends now.
+                # However, to avoid explosion, let's limit to self.concurrency per sub-question? 
+                # Or since we are already inside a thread (processing sub-question), spawning more threads might be too much?
+                # Actually, process_sub_question is running in a thread. 
+                # Spawning more threads inside might be okay if we have resources.
+                # Let's use a local ThreadPool for this batch.
+                
+                with ThreadPoolExecutor(max_workers=5) as verifier_executor:
+                     # Submit all hypothesis verifications
+                     verification_futures = [verifier_executor.submit(verify_single_hypothesis, hyp) for hyp in hypotheses]
+                     
+                     for future in verification_futures:
+                         try:
+                             res = future.result()
+                             if res:
+                                 sub_results.append(res)
+                         except Exception as e:
+                             logger.error(f"Error in verification future: {e}")
+
                 logger.info(f"[End] Finished SubQ: {sq.question} - Found {len(sub_results)} verified paths")
                 return sub_results
             except Exception as e:
@@ -435,8 +472,9 @@ class IHDGTPipeline:
         # Step 6: Synthesis
         logger.info(">>> Step 6: Synthesis")
         if not final_verified_paths:
-             logger.warning("No verified paths found. potentially answering with fallback.")
-             return "I could not find enough verified information to answer your query securely."
+             logger.warning("No verified paths found. Falling back to direct LLM answer.")
+             # Fallback: Just ask the responser to answer based on the query and options using its internal knowledge
+             return self.responser.generate_answer(query, [])
              
         answer = self.responser.generate_answer(query, final_verified_paths)
         return answer

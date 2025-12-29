@@ -4,7 +4,11 @@ Retrieval:
     client: "ollama"
     model: "llama3.1:8b" 
     temperature: 0.0
-    base_url: "http://localhost:11434"
+    base_url: 
+      - "http://localhost:11434"
+      - "http://localhost:11435"
+      - "http://localhost:11436"
+      - "http://localhost:11437"
     concurrency: 5 # Number of concurrent requests for decomposition
 
   # Pipeline Steps Configuration

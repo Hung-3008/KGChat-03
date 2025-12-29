@@ -1,25 +1,38 @@
 from ollama import Client
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, List
 from pydantic import BaseModel
-
+import threading
+import itertools
+import random
 
 class OllamaClient:
     def __init__(self, config: dict, **kwargs):
         self.model = config.get("model", "llama3.1:1b")
         self.temperature = config.get("temperature", 0.85)
         self.top_p = config.get("top_p", 0.9)
-        # optional seed for reproducibility if supported by Ollama
         self.seed = config.get("seed", None)
         
-        base_url = config.get("base_url", "http://localhost:11434")
-        self.client = Client(host=base_url)
+        base_urls = config.get("base_url", "http://localhost:11434")
+        if isinstance(base_urls, str):
+            base_urls = [base_urls]
+            
+        self.clients = [Client(host=url) for url in base_urls]
+        self.client_cycle = itertools.cycle(self.clients)
+        self.lock = threading.Lock()
+        
+        print(f"DEBUG: OllamaClient initialized with {len(self.clients)} instances: {base_urls}")
+
+    def _get_next_client(self):
+        with self.lock:
+            return next(self.client_cycle)
 
     def _normal_response(self, prompt: str) -> str:
+        client = self._get_next_client()
         options = {"temperature": self.temperature, "top_p": self.top_p}
         if self.seed is not None:
             options["seed"] = self.seed
 
-        response = self.client.chat(
+        response = client.chat(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             options=options,
@@ -27,6 +40,7 @@ class OllamaClient:
         return response.message.content
 
     def _structured_response(self, prompt: str, format: Union[BaseModel, Dict]) -> Dict:
+        client = self._get_next_client()
         options = {"temperature": self.temperature, "top_p": self.top_p}
         if self.seed is not None:
             options["seed"] = self.seed
@@ -36,7 +50,7 @@ class OllamaClient:
         else:
             schema = format.model_json_schema()
 
-        response = self.client.chat(
+        response = client.chat(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             format=schema,
