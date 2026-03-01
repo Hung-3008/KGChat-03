@@ -4,7 +4,7 @@ import json
 
 
 class SectionChunker:
-    def chunk(self, data: Union[dict, str, Path]) -> List[str]:
+    def chunk(self, data: Union[dict, list, str, Path]) -> List[str]:
         if isinstance(data, (str, Path)):
             try:
                 p = Path(data)
@@ -12,6 +12,18 @@ class SectionChunker:
                     data = json.load(f)
             except Exception:
                 return []
+
+        # Format 1: list of dicts with "text" field
+        # e.g. [{"chunk_id": "...", "text": "..."}, ...]
+        if isinstance(data, list):
+            out: List[str] = []
+            for item in data:
+                t = item.get("text") if isinstance(item, dict) else None
+                if t and isinstance(t, str) and t.strip():
+                    out.append(t.strip())
+            return self._merge_chunks(out)
+
+        # Format 2: dict with "content_sections" key
         if not isinstance(data, dict):
             return []
         sections = data.get("content_sections") or []

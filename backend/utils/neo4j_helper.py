@@ -73,6 +73,13 @@ class Neo4jHelper:
             session.run(query)
         logger.info("Created unique constraint on Level1(id)")
 
+    def create_entity_index(self):
+        """Creates a unique constraint on id for Entity nodes."""
+        query = "CREATE CONSTRAINT IF NOT EXISTS FOR (n:Entity) REQUIRE n.id IS UNIQUE"
+        with self.driver.session() as session:
+            session.run(query)
+        logger.info("Created unique constraint on Entity(id)")
+
     def insert_nodes(self, nodes: List[Dict]):
         """
         Batch insert nodes.
@@ -125,6 +132,69 @@ class Neo4jHelper:
             logger.error(f"Failed to insert edges batch: {e}")
             logger.error(f"First edge in batch: {edges[0] if edges else 'empty batch'}")
             raise
+
+    def insert_entity_nodes(self, nodes: List[Dict]):
+        """
+        Batch insert Entity nodes.
+        Expected node dict: {'id': str, 'name': str, 'semantic_type': str, 'cui': str}
+        """
+        query = """
+        UNWIND $nodes AS node
+        MERGE (n:Entity {id: node.id})
+        SET n.name = node.name,
+            n.semantic_type = node.semantic_type,
+            n.cui = node.cui
+        RETURN count(n) as nodes_processed
+        """
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, nodes=nodes)
+                summary = result.consume()
+                logger.debug(f"Inserted Entity batch: {summary.counters.nodes_created} created, {summary.counters.properties_set} properties set")
+                return summary.counters.nodes_created
+        except Exception as e:
+            logger.error(f"Failed to insert Entity nodes batch: {e}")
+            raise
+
+    def insert_entity_edges(self, edges: List[Dict]):
+        """
+        Batch insert edges between Entity nodes.
+        Expected edge dict: {'source_id': str, 'target_id': str, 'relation': str}
+        """
+        query = """
+        UNWIND $edges AS edge
+        MATCH (s:Entity {id: edge.source_id})
+        MATCH (t:Entity {id: edge.target_id})
+        CALL apoc.merge.relationship(s, edge.relation, {}, {}, t, {})
+        YIELD rel
+        RETURN count(rel) as edges_processed
+        """
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, edges=edges)
+                summary = result.consume()
+                logger.debug(f"Inserted Entity edges batch: {summary.counters.relationships_created} relationships created")
+                return summary.counters.relationships_created
+        except Exception as e:
+            logger.error(f"Failed to insert Entity edges batch: {e}")
+            raise
+
+    def link_entities_to_chunk(self, entity_ids: List[str], chunk_id: str):
+        """
+        Create MENTIONED_IN relationships from Entity nodes to a Chunk node.
+        """
+        query = """
+        UNWIND $entity_ids AS eid
+        MATCH (e:Entity {id: eid})
+        MATCH (c:Chunk {chunk_id: $chunk_id})
+        MERGE (e)-[:MENTIONED_IN]->(c)
+        """
+        try:
+            with self.driver.session() as session:
+                session.run(query, entity_ids=entity_ids, chunk_id=chunk_id)
+                logger.debug(f"Linked {len(entity_ids)} entities to chunk {chunk_id}")
+        except Exception as e:
+            logger.error(f"Failed to link entities to chunk {chunk_id}: {e}")
 
     def query(self, cypher_query: str, parameters: Dict = None) -> List[Dict]:
         """

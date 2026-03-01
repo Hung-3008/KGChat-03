@@ -15,9 +15,9 @@ Encoder:
   device: cuda
 
 Create:
-  Batch_size: 1
-  Limit: 1
-  Resume: False
+  Batch_size: 20
+  Limit: null
+  Resume: True
   max_parallel_chunks: 3
 
 Insert:

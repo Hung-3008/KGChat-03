@@ -25,7 +25,7 @@ class Keywords(BaseModel):
     keywords: List[str]
 
 class RetrievalManager:
-    def __init__(self, config_path: str = "backend/configs/configs.yml"):
+    def __init__(self, config_path: str = "/home/nguyenthang/Tài liệu/import_qdrant/KGChat-03/backend/configs/configs.yml"):
         self.config = self._load_config(config_path)
         
         # Initialize clients
